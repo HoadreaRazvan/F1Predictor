@@ -1,0 +1,13 @@
+# Output generat (dataset, modele, grafice, predicții)
+outputs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Cache FastF1 (mare; păstrat local) — decomentează dacă nu vrei să-l versionezi
+# data/cache/
