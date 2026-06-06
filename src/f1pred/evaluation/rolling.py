@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .. import config
 from ..features.engineering import feature_matrix
 from ..models import build_model
-from ..predict.season_standings import actual_standings, predicted_standings
 from . import metrics
+
+_METRICS = ("accuracy", "podium_hit_rate", "exact_podium_set", "winner_acc")
 
 
 @dataclass
@@ -35,6 +35,21 @@ class RollingResult:
         return out
 
 
+def _eval_on(model, season_df: pd.DataFrame) -> tuple[dict, np.ndarray, np.ndarray, np.ndarray]:
+    X, y_true, _ = feature_matrix(season_df)
+    proba = np.asarray(model.predict_proba(X), dtype=float)
+    y_pred = (proba >= 0.5).astype(int)
+    pod = metrics.podium_metrics(season_df, proba)
+    m = {
+        "accuracy": metrics.accuracy(y_true, y_pred),
+        "podium_hit_rate": pod["podium_hit_rate"],
+        "exact_podium_set": pod["exact_podium_set"],
+        "winner_acc": pod["winner_acc"],
+        "n_races": pod["n_races"],
+    }
+    return m, y_true, y_pred, proba
+
+
 def rolling_cross_year(
     feats: pd.DataFrame,
     model_key: str,
@@ -50,53 +65,48 @@ def rolling_cross_year(
     last_importances = None
     feat_names: list[str] = []
 
-    for test_season in seasons[1:]:
-        train = feats[feats["season"] < test_season]
+    for i in range(2, len(seasons)):
+        test_season = seasons[i]
+        val_season = seasons[i - 1]
+        train = feats[feats["season"].isin(seasons[:i - 1])]
+        val = feats[feats["season"] == val_season]
         test = feats[feats["season"] == test_season]
         if train.empty or test.empty:
             continue
 
         Xtr, ytr, feat_names = feature_matrix(train)
-        Xte, yte, _ = feature_matrix(test)
 
         model = build_model(model_key, **model_overrides)
         t0 = time.perf_counter()
         model.fit(Xtr, ytr)
         fit_seconds = time.perf_counter() - t0
         fit_times.append(fit_seconds)
-        proba = model.predict_proba(Xte)
-        y_pred = (proba >= 0.5).astype(int)
 
-        cls = metrics.classification_report(yte, y_pred)
-        pod = metrics.podium_metrics(test, proba)
+        test_m, yte, y_pred_test, proba_test = _eval_on(model, test)
 
-        pred_tbl = predicted_standings(test, proba)
-        act_tbl = actual_standings(test)
-        champ = metrics.standings_overlap(
-            list(pred_tbl["driver"].head(3)), list(act_tbl["driver"].head(3))
-        )
+        val_m = _eval_on(model, val)[0] if not val.empty else {}
 
         rec = {
             "season": int(test_season),
+            "val_season": int(val_season),
             "n_train_rows": int(len(train)),
-            **{k: cls[k] for k in ("accuracy", "precision", "recall", "f1")},
-            **{k: pod[k] for k in ("podium_hit_rate", "exact_podium_set", "podium_ordered", "winner_acc")},
-            "n_races": pod["n_races"],
-            **champ,
+            **{k: test_m[k] for k in _METRICS},
+            "n_races": test_m["n_races"],
+            **{f"val_{k}": val_m.get(k, float("nan")) for k in _METRICS},
             "fit_seconds": fit_seconds,
         }
         records.append(rec)
+
         y_true_all.extend(yte.tolist())
-        y_pred_all.extend(y_pred.tolist())
-        y_proba_all.extend(np.asarray(proba, dtype=float).tolist())
+        y_pred_all.extend(y_pred_test.tolist())
+        y_proba_all.extend(proba_test.tolist())
         last_importances = model.feature_importances_
 
         if verbose:
             print(
-                f"  [{model_key:6s}] {test_season}: "
-                f"acc={rec['accuracy']:.3f} F1={rec['f1']:.3f} "
-                f"podium_hit={rec['podium_hit_rate']:.3f} winner={rec['winner_acc']:.3f} "
-                f"champ_top3={rec['champ_top3_overlap']:.2f}"
+                f"  [{model_key:6s}] test {test_season} (val {val_season}): "
+                f"acc={rec['accuracy']:.3f} podium_hit={rec['podium_hit_rate']:.3f} "
+                f"exact_podium={rec['exact_podium_set']:.3f} top1={rec['winner_acc']:.3f}"
             )
 
     per_season = pd.DataFrame(records)

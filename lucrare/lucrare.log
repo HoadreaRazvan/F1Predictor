@@ -1,10 +1,9 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.5) (preloaded format=xelatex 2026.6.5)  5 JUN 2026 16:44
+This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.5) (preloaded format=xelatex 2026.6.5)  6 JUN 2026 20:42
 entering extended mode
  restricted \write18 enabled.
- file:line:error style messages enabled.
  %&-line parsing enabled.
-**c:/Users/hoadr/Desktop/Licenta/f1-predictor/lucrare/lucrare.tex
-(c:/Users/hoadr/Desktop/Licenta/f1-predictor/lucrare/lucrare.tex
+**C:/Users/hoadr/Desktop/Licenta/f1-predictor/lucrare/lucrare.tex
+(C:/Users/hoadr/Desktop/Licenta/f1-predictor/lucrare/lucrare.tex
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-04-28>
 (C:\Users\hoadr\AppData\Local\Programs\MiKTeX\tex/latex/base\report.cls
@@ -1146,7 +1145,7 @@ Package csquotes Info: Checking for multilingual support...
 Package csquotes Info: ... found 'babel' package.
 Package csquotes Info: Adjusting default style.
 Package csquotes Info: Redefining alias 'default' -> 'romanian'.
- (lucrare.aux)
+ (C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.aux)
 \openout1 = `lucrare.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 126.
@@ -1275,7 +1274,8 @@ Package caption Info: listings package is loaded.
 Package caption Info: End \AtBeginDocument code.
 \c@lstlisting=\count496
 Package hyperref Info: Link coloring OFF on input line 126.
-(lucrare.out) (lucrare.out)
+(C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.out)
+(C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.out)
 \@outlinefile=\write5
 \openout5 = `lucrare.out'.
 
@@ -1294,7 +1294,7 @@ Package biblatex Info: Automatic encoding selection.
 
 Package biblatex Info: Trying to load bibliographic data...
 Package biblatex Info: ... file 'lucrare.bbl' found.
- (lucrare.bbl)
+ (C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.bbl)
 Package biblatex Info: Reference section=0 on input line 126.
 Package biblatex Info: Reference segment=0 on input line 126.
 *geometry* verbose mode - [ newgeometry ] result:
@@ -1344,84 +1344,102 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 [1
 
 
-] [1] [1] (lucrare.toc [1
+] [1] [1] (C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.toc
+[1
 
 
-])
+] [2] [3])
 \tf@toc=\write6
 \openout6 = `lucrare.toc'.
 
- [2]
+ [4]
 Capitolul 1.
-[3
-
-] [4]
-Capitolul 2.
 [5
 
-] [6] [7] [8] [9]
+] [6] [7]
+Capitolul 2.
+[8
+
+] [9] [10] [11] [12] [13] [14] [15] [16] [17] [18]
+Overfull \hbox (11.94978pt too wide) in paragraph at lines 1048--1051
+\TU/TimesNewRoman(0)/m/n/12 Aceste metrici corespund evaluării de tip “top-$\OM
+L/cmm/m/it/12 k$\TU/TimesNewRoman(0)/m/n/12 ” din regăsirea informației și ordo
+nare (Secțiunea []2.2[]) [[]9[]].
+ []
+
+[19] [20] [21]
 Capitolul 3.
-[10
+[22
+
+] [23] [24] [25] [26]
+Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
+nput line 1411.
+ [27] [28] [29] [30] [31] [32] [33] [34] [35] [36]
+[37] [38] [39] [40] [41]
+Capitolul 4.
+[42
 
 ]
-Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 720.
- [11] [12] [13] [14]
-Capitolul 4.
 File: ../outputs/plots/accuracy.png Graphic file (type bmp)
 <../outputs/plots/accuracy.png>
 File: ../outputs/plots/podium_hit_rate.png Graphic file (type bmp)
 <../outputs/plots/podium_hit_rate.png>
-[15
+File: ../outputs/plots/metric_summary.png Graphic file (type bmp)
+<../outputs/plots/metric_summary.png>
+ [43] [44] [45]
+File: ../outputs/plots/feature_importance_forest.png Graphic file (type bmp)
+<../outputs/plots/feature_importance_forest.png>
+ [46]
+File: ../outputs/plots/insezon_2025_accuracy.png Graphic file (type bmp)
+<../outputs/plots/insezon_2025_accuracy.png>
+File: ../outputs/plots/insezon_2025_podium_hit_rate.png Graphic file (type bmp)
 
-]
-File: ../outputs/plots/roc_all.png Graphic file (type bmp)
-<../outputs/plots/roc_all.png>
- [16]
-File: ../outputs/plots/valcurve_forest_n_estimators.png Graphic file (type bmp)
-
-<../outputs/plots/valcurve_forest_n_estimators.png>
-File: ../outputs/plots/heatmap_tree_max_depth_x_min_samples_leaf.png Graphic fi
-le (type bmp)
-<../outputs/plots/heatmap_tree_max_depth_x_min_samples_leaf.png>
-File: ../outputs/plots/train_time_models.png Graphic file (type bmp)
-<../outputs/plots/train_time_models.png>
- [17] [18]
-File: ../outputs/plots/convergence_logreg.png Graphic file (type bmp)
-<../outputs/plots/convergence_logreg.png>
-File: ../outputs/plots/oob_forest.png Graphic file (type bmp)
-<../outputs/plots/oob_forest.png>
-File: ../outputs/plots/stability_podium_hit_rate.png Graphic file (type bmp)
-<../outputs/plots/stability_podium_hit_rate.png>
-File: ../outputs/plots/threshold_forest.png Graphic file (type bmp)
-<../outputs/plots/threshold_forest.png>
- [19]
-File: ../outputs/plots/standings_2025_forest.png Graphic file (type bmp)
-<../outputs/plots/standings_2025_forest.png>
- [20] [21]
+<../outputs/plots/insezon_2025_podium_hit_rate.png>
+File: ../outputs/plots/insezon_2025_exact_podium.png Graphic file (type bmp)
+<../outputs/plots/insezon_2025_exact_podium.png>
+File: ../outputs/plots/insezon_2025_winner_acc.png Graphic file (type bmp)
+<../outputs/plots/insezon_2025_winner_acc.png>
+ [47] [48]
 Capitolul 5.
-[22
 
-] [23] [24
+Underfull \hbox (badness 10000) in paragraph at lines 2388--2390
+[]|\TU/TimesNewRoman(0)/m/n/12 cele trei module din pachetul
+ []
 
-] [25] (lucrare.aux)
+
+Underfull \hbox (badness 1052) in paragraph at lines 2400--2401
+[]|\TU/TimesNewRoman(0)/m/n/12 Evaluare cu separare temporală în
+ []
+
+
+Underfull \hbox (badness 3919) in paragraph at lines 2402--2403
+[]|\TU/TimesNewRoman(0)/m/n/12 validare pe șase sezoane de test
+ []
+
+[49
+
+] [50] [51] [52
+
+] [53]
+(C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-04-28>
  ***********
 Package rerunfilecheck Info: File `lucrare.out' has not changed.
-(rerunfilecheck)             Checksum: 6739CAD08EC1AFEE40F5CAB263A1689E;7788.
+(rerunfilecheck)             Checksum: 4DD8EB49AACE52CABFF9CFFF5A455873;16334.
 Package logreq Info: Writing requests to 'lucrare.run.xml'.
 \openout1 = `lucrare.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 36243 strings out of 402799
- 726211 string characters out of 5444870
- 1772166 words of memory out of 5000000
- 64642 multiletter control sequences out of 15000+600000
- 633102 words of font info for 106 fonts, out of 8000000 for 9000
+ 36558 strings out of 402799
+ 732448 string characters out of 5444870
+ 1764108 words of memory out of 5000000
+ 64955 multiletter control sequences out of 15000+600000
+ 634682 words of font info for 116 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 84i,11n,94p,748b,5059s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,12n,94p,748b,5056s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on lucrare.pdf (28 pages).
+Output written on C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.p
+df (56 pages).

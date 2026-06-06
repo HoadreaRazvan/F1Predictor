@@ -18,11 +18,3 @@ def test_perfect_prediction():
     y = np.array([0, 1, 1, 0])
     assert metrics.accuracy(y, y) == 1.0
     assert metrics.f1(y, y) == 1.0
-
-
-def test_standings_overlap():
-    res = metrics.standings_overlap(["VER", "NOR", "LEC"], ["VER", "LEC", "NOR"])
-    assert res["champ_top3_overlap"] == 1.0
-    assert res["champ_top3_exact"] == 0.0
-    res2 = metrics.standings_overlap(["VER", "NOR", "LEC"], ["VER", "NOR", "LEC"])
-    assert res2["champ_top3_exact"] == 1.0

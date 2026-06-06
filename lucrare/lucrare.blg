@@ -1,14 +1,14 @@
 [0] Config.pm:328> INFO - This is Biber 2.21
-[0] Config.pm:331> INFO - Logfile is 'lucrare.blg'
-[92] biber-MSWIN64:342> INFO - === 
-[127] Biber.pm:421> INFO - Reading 'lucrare.bcf'
-[217] Biber.pm:1002> INFO - Found 16 citekeys in bib section 0
-[228] Biber.pm:4487> INFO - Processing section 0
-[238] Biber.pm:4678> INFO - Looking for bibtex file 'referinte.bib' for section 0
-[287] bibtex.pm:1713> INFO - LaTeX decoding ...
-[302] bibtex.pm:1519> INFO - Found BibTeX data source 'referinte.bib'
-[391] UCollate.pm:68> INFO - Overriding locale 'ro-RO' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[391] UCollate.pm:68> INFO - Overriding locale 'ro-RO' defaults 'variable = shifted' with 'variable = non-ignorable'
-[391] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'ro-RO'
-[398] bbl.pm:676> INFO - Writing 'lucrare.bbl' with encoding 'UTF-8'
-[406] bbl.pm:779> INFO - Output to lucrare.bbl
+[0] Config.pm:331> INFO - Logfile is 'C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.blg'
+[96] biber-MSWIN64:342> INFO - === 
+[138] Biber.pm:421> INFO - Reading 'C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.bcf'
+[240] Biber.pm:1002> INFO - Found 29 citekeys in bib section 0
+[252] Biber.pm:4487> INFO - Processing section 0
+[261] Biber.pm:4678> INFO - Looking for bibtex file 'referinte.bib' for section 0
+[330] bibtex.pm:1713> INFO - LaTeX decoding ...
+[365] bibtex.pm:1519> INFO - Found BibTeX data source 'C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\referinte.bib'
+[500] UCollate.pm:68> INFO - Overriding locale 'ro-RO' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[500] UCollate.pm:68> INFO - Overriding locale 'ro-RO' defaults 'variable = shifted' with 'variable = non-ignorable'
+[500] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'ro-RO'
+[513] bbl.pm:676> INFO - Writing 'C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.bbl' with encoding 'UTF-8'
+[528] bbl.pm:779> INFO - Output to C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.bbl

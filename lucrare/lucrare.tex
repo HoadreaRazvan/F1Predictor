@@ -422,11 +422,14 @@ sunt următoarele:
   \item \textbf{Aplicarea predicțiilor} pe un set de date real, alcătuit din rezultatele
     curselor de Formula 1 din sezoanele 2018--2025, cu o etapă de inginerie a
     caracteristicilor strict cauzală, fără scurgere de informație.
-  \item \textbf{Efectuarea unui studiu comparativ} între cei trei algoritmi, atât din punctul
-    de vedere al calității predicțiilor (acuratețe, F1, rată de nimerire a podiumului, arie
-    sub curbele ROC și Precision-Recall), cât și al costului de calcul (timpul de antrenare).
-  \item \textbf{Analiza hiperparametrilor} fiecărui model, prin curbe de validare și căutare
-    pe grilă, pentru a justifica valorile alese.
+  \item \textbf{Efectuarea unui studiu comparativ} între cei trei algoritmi din punctul de
+    vedere al calității predicțiilor, măsurată prin patru metrici: acuratețe, rata de nimerire
+    a podiumului, podiumul exact și acuratețea câștigătorului (Top-1).
+  \item \textbf{Evaluarea cu separare temporală în antrenare, validare și test pe ani},
+    pentru o estimare corectă a performanței, fără scurgere de informație.
+  \item \textbf{Analiza efectului datelor in-sezon}, prin compararea predicțiilor obținute cu și
+    fără cursele deja disputate din sezonul curent, pentru a evalua câștigul antrenării
+    incrementale.
 \end{enumerate}
 
 \section{Structura lucrării}
@@ -443,149 +446,571 @@ concluziile și propune direcții de dezvoltare ulterioară.
 \chapter{Considerații teoretice}
 \label{cap:teorie}
 
-\section{Învățarea automată și clasificarea supervizată}
+Acest capitol prezintă sinteza cunoștințelor actuale din domeniul învățării automate aplicate
+predicției și fundamentele teoretice ale metodelor folosite în dezvoltarea temei. Expunerea
+pornește de la cadrul general al învățării automate și al clasificării supervizate
+(Secțiunile~\ref{sec:ml}--\ref{sec:biasvar}), continuă cu o problemă metodologică centrală
+pentru datele studiate --- dezechilibrul de clase (Secțiunea~\ref{sec:dezechilibru}) --- și
+detaliază apoi bazele teoretice ale celor trei algoritmi implementați: regresia logistică
+(Secțiunea~\ref{sec:logreg}), arborele de decizie (Secțiunea~\ref{sec:tree}) și pădurea
+aleatoare (Secțiunea~\ref{sec:forest}). Ultimele secțiuni tratează aspectele transversale ale
+oricărui studiu experimental riguros: ingineria caracteristicilor și scurgerea de informație
+(Secțiunea~\ref{sec:leakage}), validarea și estimarea performanței (Secțiunea~\ref{sec:validare}),
+metricile de evaluare (Secțiunea~\ref{sec:metrici}), calibrarea probabilităților
+(Secțiunea~\ref{sec:calibrare}) și, în final, o trecere în revistă a lucrărilor conexe
+(Secțiunea~\ref{sec:conexe}).
 
-Învățarea automată studiază algoritmii care îmbunătățesc performanța la o sarcină pe baza
-experienței, exprimată sub forma unor date~\cite{bishop2006pattern}. În cadrul \emph{învățării
-supervizate}, algoritmul primește un set de exemple de antrenament
-$\{(\mathbf{x}_i, y_i)\}_{i=1}^{n}$, unde $\mathbf{x}_i \in \mathbb{R}^d$ este un vector de
-caracteristici, iar $y_i$ este eticheta asociată. Scopul este învățarea unei funcții
-$f: \mathbb{R}^d \to \mathcal{Y}$ care generalizează bine pe date nevăzute.
+\section{Învățarea automată: paradigme și definiții}
+\label{sec:ml}
 
-Atunci când eticheta ia două valori, $\mathcal{Y} = \{0, 1\}$, problema se numește
+Învățarea automată (eng. \emph{machine learning}) este subdomeniul inteligenței artificiale
+care studiază algoritmii capabili să își îmbunătățească performanța la o sarcină pe baza
+experienței, fără a fi programați explicit pentru fiecare situație~\cite{mitchell1997machine,
+bishop2006pattern}. O definiție operațională larg citată este cea a lui
+Mitchell~\cite{mitchell1997machine}: un program învață din experiența $E$, în raport cu o
+sarcină $T$ și o măsură de performanță $P$, dacă performanța sa la $T$, măsurată prin $P$, se
+îmbunătățește odată cu $E$. În cazul de față, sarcina $T$ este predicția podiumului unei curse,
+experiența $E$ este mulțimea rezultatelor istorice ale curselor, iar performanța $P$ este
+măsurată prin metricile descrise în Secțiunea~\ref{sec:metrici}.
+
+În funcție de natura experienței, se disting în mod tradițional trei
+paradigme~\cite{bishop2006pattern, hastie2009elements}. În \emph{învățarea supervizată},
+fiecare exemplu de antrenament este însoțit de o etichetă-țintă, iar algoritmul învață
+asocierea dintre intrare și etichetă. În \emph{învățarea nesupervizată}, datele nu au etichete,
+iar scopul este descoperirea unor structuri latente (grupări, reducerea dimensionalității). În
+\emph{învățarea cu întărire} (eng. \emph{reinforcement learning}), un agent învață o politică
+de acțiune din recompense obținute prin interacțiunea cu un mediu. Problema abordată în această
+lucrare se încadrează în prima paradigmă: dispunem de rezultate istorice etichetate (un pilot a
+terminat sau nu pe podium) și dorim să prezicem eticheta pentru curse viitoare.
+
+Învățarea supervizată se subîmparte, la rândul ei, după tipul etichetei. Când eticheta este o
+valoare numerică continuă, vorbim despre \emph{regresie}; când eticheta aparține unei mulțimi
+finite de categorii, vorbim despre \emph{clasificare}~\cite{james2013introduction}. Formal,
+algoritmul primește un set de exemple de antrenament $\{(\mathbf{x}_i, y_i)\}_{i=1}^{n}$, unde
+$\mathbf{x}_i \in \mathbb{R}^d$ este un vector de $d$ caracteristici (eng. \emph{features}), iar
+$y_i \in \mathcal{Y}$ este eticheta asociată. Obiectivul este învățarea unei funcții
+$f: \mathbb{R}^d \to \mathcal{Y}$ care nu doar reproduce etichetele de antrenament, ci
+\emph{generalizează} bine pe date nevăzute.
+
+Procesul de învățare este formulat ca minimizarea unui \emph{risc}. Dacă
+$\ell\big(f(\mathbf{x}), y\big)$ este o funcție de pierdere care penalizează discrepanța dintre
+predicție și etichetă, riscul real (de generalizare) este media pierderii pe distribuția
+necunoscută a datelor, $R(f) = \mathbb{E}_{(\mathbf{x}, y)}\big[\ell(f(\mathbf{x}), y)\big]$.
+Deoarece distribuția este necunoscută, în practică se minimizează \emph{riscul empiric},
+estimat pe setul de antrenament~\cite{hastie2009elements}:
+\begin{equation}
+  \hat{R}(f) = \frac{1}{n} \sum_{i=1}^{n} \ell\big(f(\mathbf{x}_i), y_i\big).
+  \label{eq:risc}
+\end{equation}
+Diferența dintre riscul empiric și riscul real este sursa fenomenului de supraînvățare, discutat
+în Secțiunea~\ref{sec:biasvar}: un model poate atinge un risc empiric foarte mic, memorând
+particularitățile datelor de antrenament, fără ca aceasta să garanteze un risc real scăzut.
+
+\section{Clasificarea supervizată și formularea problemei}
+\label{sec:clasificare}
+
+Atunci când eticheta ia exact două valori, $\mathcal{Y} = \{0, 1\}$, problema se numește
 \emph{clasificare binară}. În lucrarea de față, eticheta $y = 1$ semnifică faptul că pilotul
-termină pe podium (locul $\leq 3$), iar $y = 0$ în caz contrar. Multe modele de clasificare
-nu produc direct eticheta, ci o \emph{probabilitate} $\hat{p} = P(y = 1 \mid \mathbf{x})$, pe
-care o transformă într-o etichetă printr-un prag de decizie (uzual $0{,}5$). Această
-probabilitate este esențială în soluția propusă, fiindcă servește drept scor de ordonare a
-piloților în cadrul fiecărei curse.
+termină pe podium (locul $\leq 3$), iar $y = 0$ în caz contrar. Un clasificator poate fi
+\emph{discriminativ}, modelând direct granița de decizie sau probabilitatea condiționată
+$P(y \mid \mathbf{x})$, ori \emph{generativ}, modelând distribuția comună
+$P(\mathbf{x}, y)$~\cite{bishop2006pattern}. Toate cele trei modele studiate aici sunt
+discriminative.
+
+Multe clasificatoare nu produc direct eticheta, ci o \emph{probabilitate}
+$\hat{p} = P(y = 1 \mid \mathbf{x}) \in [0, 1]$, transformată ulterior într-o etichetă printr-un
+prag de decizie (uzual $0{,}5$): se prezice clasa pozitivă dacă $\hat{p} \geq 0{,}5$. Această
+probabilitate este elementul-cheie al soluției propuse: în loc de a fi binarizată pe fiecare
+pilot independent, ea servește drept \emph{scor de ordonare} a piloților în cadrul fiecărei
+curse. Astfel, problema de clasificare este reîncadrată ca o problemă de
+\emph{ordonare} (eng. \emph{learning to rank})~\cite{liu2009learning}: pentru o cursă dată,
+piloții sunt sortați descrescător după $\hat{p}$, iar primii trei formează podiumul prezis.
+Această reformulare este importantă deoarece un clasificator binar aplicat independent nu
+garantează exact trei predicții pozitive per cursă, în timp ce ordonarea produce întotdeauna un
+podium bine definit.
+
+\section{Compromisul bias--varianță, supraînvățarea și regularizarea}
+\label{sec:biasvar}
+
+Capacitatea de generalizare a unui model este guvernată de \emph{compromisul bias--varianță}
+(eng. \emph{bias--variance tradeoff})~\cite{geman1992neural, hastie2009elements}. Pentru o
+pierdere pătratică, eroarea de generalizare așteptată a unui model într-un punct se descompune în
+trei termeni: pătratul \emph{bias}-ului (eroarea sistematică introdusă de ipotezele simplificatoare
+ale modelului), \emph{varianța} (sensibilitatea modelului la fluctuațiile setului de antrenament)
+și un \emph{zgomot} ireductibil, propriu datelor:
+\begin{equation}
+  \mathbb{E}\big[(y - \hat{f}(\mathbf{x}))^2\big] =
+  \underbrace{\big(\text{Bias}[\hat{f}(\mathbf{x})]\big)^2}_{\text{eroare sistematică}} +
+  \underbrace{\text{Var}[\hat{f}(\mathbf{x})]}_{\text{instabilitate}} +
+  \underbrace{\sigma^2}_{\text{zgomot}}.
+  \label{eq:biasvar}
+\end{equation}
+
+Un model prea simplu (de exemplu, o graniță liniară pentru date neliniare) are bias mare și
+varianță mică --- fenomen numit \emph{subînvățare} (eng. \emph{underfitting}): nu reușește să
+surprindă structura datelor nici măcar pe setul de antrenament. Un model prea complex (de
+exemplu, un arbore foarte adânc) are bias mic, dar varianță mare --- \emph{supraînvățare} (eng.
+\emph{overfitting}): se potrivește zgomotului din datele de antrenament și generalizează slab.
+Scopul practic al antrenării este găsirea unui echilibru între cele două surse de
+eroare~\cite{james2013introduction}.
+
+Cele trei modele studiate acoperă, în mod intenționat, un spectru de complexitate: regresia
+logistică este un model liniar cu bias relativ mare și varianță mică; arborele de decizie
+individual este un model neliniar flexibil, cu bias mic, dar varianță mare; pădurea aleatoare
+reduce varianța arborelui prin mediere, păstrând bias-ul scăzut (Secțiunea~\ref{sec:forest}).
+Mecanismele care controlează acest compromis se numesc, generic, \emph{regularizare}: la
+regresia logistică, penalizarea $L_2$ a ponderilor; la arbore, limitarea adâncimii și a
+dimensiunii frunzelor; la pădure, agregarea mai multor arbori decorelați. Aceste mecanisme sunt
+detaliate în secțiunile dedicate fiecărui model.
 
 \section{Problema dezechilibrului de clase}
 \label{sec:dezechilibru}
 
-Un set de date este dezechilibrat atunci când clasele nu sunt reprezentate în proporții
-apropiate. În cazul predicției podiumului, doar trei din aproximativ douăzeci de piloți
-ajung pe podium în fiecare cursă, deci clasa pozitivă reprezintă circa 15\% din
-exemple. În astfel de situații, un clasificator trivial care prezice mereu clasa majoritară
-(``nu termină pe podium'') obține o acuratețe ridicată (aproximativ 85\%) fără a avea nicio
-valoare practică~\cite{he2009learning}. De aceea, evaluarea trebuie completată cu metrici
-care surprind performanța pe clasa minoritară, precum scorul F1 și aria sub curba
-Precision-Recall~\cite{saito2015precision}. O tehnică suplimentară de atenuare a
-dezechilibrului este ponderarea exemplelor pe clase în funcția de cost, aplicată în această
-lucrare la regresia logistică.
+Un set de date este \emph{dezechilibrat} (eng. \emph{imbalanced}) atunci când clasele nu sunt
+reprezentate în proporții apropiate. În cazul predicției podiumului, doar trei din aproximativ
+douăzeci de piloți ajung pe podium în fiecare cursă, deci clasa pozitivă reprezintă circa 15\%
+din exemple --- un raport de aproximativ $1{:}6$ între clasa minoritară și cea majoritară.
+Dezechilibrul afectează atât \emph{antrenarea} (funcția de cost este dominată de clasa
+majoritară, iar modelul tinde să o favorizeze), cât și \emph{evaluarea} (metricile globale devin
+înșelătoare)~\cite{he2009learning}.
+
+La nivelul evaluării, problema este ilustrată de un clasificator trivial care prezice mereu clasa
+majoritară (``nu termină pe podium''): acesta obține o acuratețe de aproximativ 85\% fără a avea
+nicio valoare practică, deoarece nu identifică niciodată un pilot de podium. Prin urmare,
+acuratețea globală nu este o măsură adecvată în prezența dezechilibrului, aspect reluat în
+analiza din Capitolul~\ref{cap:rezultate}. Evaluarea trebuie completată cu metrici care surprind
+performanța pe clasa minoritară --- precizia, recall-ul și scorul $F_1$ --- și cu metrici
+specifice problemei, calculate la nivel de cursă (Secțiunea~\ref{sec:metrici}). În literatura
+dedicată datelor dezechilibrate se subliniază, în plus, că graficul precizie--recall este mai
+informativ decât curba ROC atunci când clasa pozitivă este rară, fiindcă reflectă direct costul
+fals-pozitivelor relativ la puținele exemple pozitive~\cite{saito2015precision, fawcett2006roc}.
+
+La nivelul antrenării, literatura propune trei familii de tehnici de atenuare a
+dezechilibrului~\cite{he2009learning}. Prima este \emph{reeșantionarea} datelor: fie
+suprareprezentarea clasei minoritare (eng. \emph{oversampling}), fie subreprezentarea clasei
+majoritare (eng. \emph{undersampling}). O metodă consacrată din această familie este SMOTE
+(eng. \emph{Synthetic Minority Over-sampling Technique}), care generează exemple sintetice prin
+interpolarea între exemple minoritare vecine, în loc să le dubleze pe cele
+existente~\cite{chawla2002smote}. A doua familie este \emph{învățarea sensibilă la cost} (eng.
+\emph{cost-sensitive learning}), în care erorile pe clasa minoritară primesc o pondere mai mare
+în funcția de cost. A treia constă în ajustarea \emph{pragului de decizie}, deplasându-l față de
+valoarea implicită de $0{,}5$ pentru a echilibra precizia și recall-ul. În această lucrare se
+adoptă abordarea sensibilă la cost: la regresia logistică, fiecare exemplu primește o pondere
+invers proporțională cu frecvența clasei sale (Secțiunea~\ref{sec:logreg}), astfel încât erorile
+pe clasa de podium să contribuie semnificativ la funcția de cost. Această alegere evită
+introducerea de exemple sintetice și păstrează structura cauzală a datelor (Secțiunea~\ref{sec:leakage}).
 
 \section{Regresia logistică}
 \label{sec:logreg}
 
-Regresia logistică modelează probabilitatea clasei pozitive printr-o transformare neliniară a
-unei combinații liniare de caracteristici~\cite{hastie2009elements}. Fie $\mathbf{w}$ vectorul
-de ponderi și $b$ termenul liber; modelul calculează scorul $z = \mathbf{w}^\top \mathbf{x} + b$
-și îl transformă prin funcția \emph{sigmoid}:
+Regresia logistică este unul dintre cele mai folosite modele de clasificare, apreciat pentru
+simplitate, eficiență și interpretabilitate~\cite{hastie2009elements, james2013introduction}. În
+ciuda denumirii, este un model de \emph{clasificare}, nu de regresie: modelează probabilitatea
+clasei pozitive printr-o transformare neliniară a unei combinații liniare de caracteristici.
+
+\subsection{Modelul și interpretarea log-odds}
+
+Fie $\mathbf{w} \in \mathbb{R}^d$ vectorul de ponderi și $b \in \mathbb{R}$ termenul liber.
+Modelul calculează un scor liniar $z = \mathbf{w}^\top \mathbf{x} + b$ și îl transformă într-o
+probabilitate prin funcția \emph{logistică} (sau \emph{sigmoid}):
 \begin{equation}
   \sigma(z) = \frac{1}{1 + e^{-z}}, \qquad \hat{p} = \sigma(\mathbf{w}^\top \mathbf{x} + b).
   \label{eq:sigmoid}
 \end{equation}
+Funcția sigmoid este monoton crescătoare, simetrică în jurul punctului $(0, 0{,}5)$ și comprimă
+orice valoare reală în intervalul $(0, 1)$, putând fi astfel interpretată ca probabilitate.
+Sensul ponderilor devine transparent dacă rescriem modelul în termeni de \emph{cote
+logaritmice} (eng. \emph{log-odds}). Inversând relația~\eqref{eq:sigmoid}, se obține:
+\begin{equation}
+  \log \frac{\hat{p}}{1 - \hat{p}} = \mathbf{w}^\top \mathbf{x} + b.
+  \label{eq:logit}
+\end{equation}
+Cu alte cuvinte, regresia logistică presupune că logaritmul raportului dintre șansa de podium și
+șansa de non-podium este liniar în caracteristici. O creștere cu o unitate a caracteristicii $j$
+modifică log-odds-ul cu $w_j$, deci înmulțește cota cu $e^{w_j}$. Această proprietate face
+modelul ușor de interpretat: semnul și magnitudinea fiecărei ponderi indică direcția și tăria
+influenței caracteristicii respective.
 
-Antrenarea minimizează funcția de cost de tip \emph{entropie încrucișată} (eng.
-\emph{cross-entropy}), la care se adaugă un termen de regularizare $L_2$ ce penalizează
-ponderile mari și combate supraînvățarea:
+\subsection{Estimarea prin maximul verosimilității și entropia încrucișată}
+
+Ponderile se determină prin principiul \emph{maximului verosimilității}. Presupunând exemple
+independente, verosimilitatea modelului este $\prod_{i=1}^{N} \hat{p}_i^{\,y_i}(1 - \hat{p}_i)^{1 - y_i}$.
+Maximizarea logaritmului verosimilității este echivalentă cu minimizarea \emph{entropiei
+încrucișate} (eng. \emph{cross-entropy}) negate, la care se adaugă un termen de regularizare
+$L_2$ ce penalizează ponderile mari și combate supraînvățarea (Secțiunea~\ref{sec:biasvar}):
 \begin{equation}
   \mathcal{L}(\mathbf{w}, b) = -\frac{1}{N} \sum_{i=1}^{N} \Big[ y_i \log \hat{p}_i +
   (1 - y_i) \log (1 - \hat{p}_i) \Big] + \frac{\lambda}{2} \lVert \mathbf{w} \rVert_2^2 .
   \label{eq:bce}
 \end{equation}
+Un avantaj teoretic important este că această funcție de cost este \emph{convexă} în raport cu
+parametrii~\cite{boyd2004convex}: nu există minime locale, ci un singur minim global, ceea ce
+garantează că o metodă de optimizare bine reglată converge către soluția optimă. Alegerea
+entropiei încrucișate în locul erorii pătratice este esențială: combinată cu sigmoidul, ea
+conduce la un gradient simplu și evită saturarea derivatei care ar încetini învățarea.
 
-Minimizarea se realizează prin \emph{coborâre pe gradient} (eng. \emph{gradient descent}):
-ponderile sunt actualizate iterativ în sensul opus gradientului, cu un pas de învățare $\eta$.
-Gradientul funcției de cost față de ponderi are forma compactă:
+\subsection{Coborârea pe gradient}
+
+Spre deosebire de regresia liniară, ecuația $\nabla \mathcal{L} = 0$ nu are soluție în formă
+închisă, astfel încât minimizarea se realizează numeric, prin \emph{coborâre pe gradient} (eng.
+\emph{gradient descent})~\cite{boyd2004convex}. Ponderile sunt inițializate (aici cu zero) și
+actualizate iterativ în sensul opus gradientului, cu un pas de învățare $\eta$:
+$\mathbf{w} \leftarrow \mathbf{w} - \eta \, \nabla_{\mathbf{w}} \mathcal{L}$. Gradientul funcției
+de cost față de ponderi are forma compactă, în care $\mathbf{X}$ este matricea exemplelor,
+$\hat{\mathbf{p}}$ vectorul probabilităților prezise și $\mathbf{y}$ vectorul etichetelor:
 \begin{equation}
   \nabla_{\mathbf{w}} \mathcal{L} = \frac{1}{N} \mathbf{X}^\top (\hat{\mathbf{p}} - \mathbf{y})
   + \lambda \mathbf{w}.
   \label{eq:gradient}
 \end{equation}
 
+Termenul $(\hat{\mathbf{p}} - \mathbf{y})$ este \emph{reziduul} predicției; intuitiv,
+contribuția fiecărui exemplu la actualizare este proporțională cu cât de mult ``greșește''
+modelul pe el. În funcție de câte exemple se folosesc la fiecare actualizare, se disting trei
+variante~\cite{hastie2009elements}: varianta \emph{batch} (gradientul se calculează pe întreg
+setul, ca în relația~\eqref{eq:gradient}), varianta \emph{stocastică} (un singur exemplu pe pas)
+și varianta \emph{mini-batch} (un subset). Varianta batch oferă actualizări stabile și a fost
+adoptată în această lucrare, dat fiind volumul moderat al setului de date. Pasul de învățare
+$\eta$ controlează viteza convergenței: o valoare prea mare poate provoca oscilații sau
+divergență, iar una prea mică încetinește antrenarea. Convergența poate fi monitorizată urmărind
+evoluția funcției de cost de la o iterație la alta.
+
+\subsection{Regularizarea și standardizarea}
+
+Termenul $\tfrac{\lambda}{2} \lVert \mathbf{w} \rVert_2^2$ din relația~\eqref{eq:bce} reprezintă
+\emph{regularizarea} $L_2$ (sau \emph{ridge}), care descurajează ponderile mari și, implicit,
+modelele excesiv de încrezătoare; coeficientul $\lambda$ reglează intensitatea
+penalizării~\cite{hastie2009elements}. O alternativă este regularizarea $L_1$ (\emph{lasso}),
+care penalizează suma valorilor absolute ale ponderilor și are proprietatea de a anula complet
+unele ponderi, realizând astfel o selecție de caracteristici. În această lucrare se folosește
+regularizarea $L_2$, mai stabilă numeric pentru optimizarea pe gradient.
+
+Deoarece coborârea pe gradient și penalizarea $L_2$ sunt sensibile la scara caracteristicilor, o
+etapă de preprocesare necesară este \emph{standardizarea} (eng. \emph{z-score}): fiecare
+caracteristică este transformată să aibă medie zero și abatere standard unitară,
+$x' = (x - \mu)/\sigma$. În absența standardizării, caracteristicile cu valori numerice mari ar
+domina gradientul și ar fi penalizate disproporționat. Esențial, parametrii standardizării
+($\mu$ și $\sigma$) se estimează \emph{exclusiv} pe datele de antrenament și se reaplică identic
+la validare și test, pentru a nu introduce scurgere de informație (Secțiunea~\ref{sec:leakage}).
+
 Pentru a contracara dezechilibrul de clase (Secțiunea~\ref{sec:dezechilibru}), fiecare exemplu
-poate primi o pondere invers proporțională cu frecvența clasei sale, astfel încât erorile pe
-clasa minoritară (podium) să contribuie semnificativ la funcția de cost.
+poate primi în plus o pondere invers proporțională cu frecvența clasei sale, astfel încât
+erorile pe clasa minoritară (podium) să contribuie semnificativ la funcția de cost.
 
 \section{Arbori de decizie}
 \label{sec:tree}
 
-Un arbore de decizie partiționează recursiv spațiul caracteristicilor prin teste de forma
-``caracteristica $j$ este $\leq$ pragul $t$?''~\cite{breiman1984cart}. Fiecare nod intern
-aplică un astfel de test, iar fiecare frunză stochează o predicție --- în cazul de față,
-fracția de exemple pozitive din frunză, interpretată drept probabilitate de podium.
+Arborii de decizie sunt modele neparametrice care partiționează recursiv spațiul
+caracteristicilor printr-o succesiune de teste simple, organizate sub forma unei structuri
+arborescente. Familia a fost dezvoltată în paralel în statistică --- prin algoritmul CART
+(eng. \emph{Classification and Regression Trees})~\cite{breiman1984cart} --- și în inteligența
+artificială, prin algoritmii ID3 și C4.5 ai lui Quinlan~\cite{quinlan1986induction,
+quinlan1993c45}. Implementarea din această lucrare urmează modelul CART pentru clasificare
+binară.
 
-Criteriul de alegere a divizărilor folosit în această lucrare este \emph{câștigul de
-informație} (eng. \emph{information gain}), bazat pe \emph{entropie}. Pentru un nod cu
-proporția $p$ de exemple pozitive, entropia binară este:
+\subsection{Partiționarea recursivă}
+
+Un arbore de decizie este alcătuit din \emph{noduri interne}, fiecare aplicând un test de forma
+``caracteristica $j$ este $\leq$ pragul $t$?'', și din \emph{frunze}, care stochează o
+predicție. Pornind de la rădăcină, fiecare exemplu este rutat spre stânga sau spre dreapta în
+funcție de rezultatul testului, până ajunge într-o frunză. În cazul de față, frunza stochează
+fracția de exemple pozitive din ea, interpretată drept probabilitate de podium. Figura~\ref{fig:arbore}
+ilustrează schematic această structură.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      level distance=1.6cm,
+      inode/.style={draw, rounded corners, align=center, font=\small, minimum height=0.8cm},
+      leaf/.style={draw, align=center, font=\small, fill=green!8, minimum height=0.8cm},
+      every edge/.style={draw, -{Stealth[length=2mm]}},
+      level 1/.style={sibling distance=6cm},
+      level 2/.style={sibling distance=3cm}
+    ]
+    \node[inode] (root) {poziție grilă $\leq 3$?}
+      child {node[inode] (l) {formă pilot $\leq 0{,}4$?}
+        child {node[leaf] {$\hat{p} = 0{,}12$} edge from parent node[above left, font=\scriptsize]{da}}
+        child {node[leaf] {$\hat{p} = 0{,}71$} edge from parent node[above right, font=\scriptsize]{nu}}
+        edge from parent node[above left, font=\scriptsize]{nu}}
+      child {node[inode] (r) {pole position?}
+        child {node[leaf] {$\hat{p} = 0{,}68$} edge from parent node[above left, font=\scriptsize]{nu}}
+        child {node[leaf] {$\hat{p} = 0{,}89$} edge from parent node[above right, font=\scriptsize]{da}}
+        edge from parent node[above right, font=\scriptsize]{da}};
+  \end{tikzpicture}
+  \caption{Exemplu schematic de arbore de decizie pentru predicția podiumului. Fiecare nod
+    intern aplică un test asupra unei caracteristici, iar frunzele estimează probabilitatea de
+    podium $\hat{p}$.}
+  \label{fig:arbore}
+\end{figure}
+
+Construirea arborelui este \emph{lacomă} (eng. \emph{greedy}) și de sus în jos: la fiecare nod
+se alege divizarea care optimizează local un criteriu, fără a reconsidera deciziile anterioare.
+Această strategie nu garantează arborele global optim (problemă NP-dificilă), dar este eficientă
+și produce, în practică, arbori buni~\cite{hastie2009elements}.
+
+\subsection{Măsuri de impuritate}
+
+Calitatea unei divizări se evaluează prin reducerea \emph{impurității} nodurilor. O măsură de
+impuritate este maximă atunci când clasele sunt amestecate în proporții egale și nulă atunci când
+nodul conține o singură clasă (nod \emph{pur}). Criteriul folosit în această lucrare este
+\emph{câștigul de informație} (eng. \emph{information gain}), bazat pe \emph{entropie}. Pentru un
+nod cu proporția $p$ de exemple pozitive, entropia binară este:
 \begin{equation}
   H(p) = -p \log_2 p - (1 - p) \log_2 (1 - p),
   \label{eq:entropie}
 \end{equation}
 cu convenția $0 \log_2 0 = 0$. Câștigul de informație al unei divizări care împarte un nod
-părinte în doi copii (stânga și dreapta) este reducerea de entropie:
+părinte în doi copii (stânga și dreapta) este reducerea de impuritate:
 \begin{equation}
   IG = H(\text{părinte}) - \frac{n_{st}}{n} H(\text{stânga}) - \frac{n_{dr}}{n} H(\text{dreapta}).
   \label{eq:gain}
 \end{equation}
 Algoritmul alege, la fiecare nod, perechea (caracteristică, prag) care maximizează câștigul de
-informație. Creșterea arborelui se oprește la atingerea unor criterii precum adâncimea maximă
-(\texttt{max\_depth}), numărul minim de exemple necesare pentru divizare
-(\texttt{min\_samples\_split}) sau numărul minim de exemple într-o frunză
-(\texttt{min\_samples\_leaf}). Aceste criterii controlează compromisul dintre subînvățare și
-supraînvățare.
+informație.
+
+Entropia nu este singura măsură de impuritate. Tabelul~\ref{tab:impuritate} rezumă cele trei
+măsuri uzuale pentru clasificarea binară, exprimate în funcție de proporția $p$ a clasei
+pozitive~\cite{breiman1984cart, hastie2009elements}. Indicele Gini, folosit implicit de CART,
+este apropiat numeric de entropie, dar evită calculul logaritmului; eroarea de clasificare este
+prea grosieră pentru a ghida creșterea arborelui și se folosește mai degrabă la retezare. În
+practică, alegerea între Gini și entropie are un efect minor asupra performanței.
+
+\begin{table}[htbp]
+  \caption{Măsuri uzuale de impuritate pentru clasificarea binară (proporția clasei pozitive $p$).}
+  \label{tab:impuritate}
+  \begin{tabular}{l l c}
+    \toprule
+    \textbf{Măsură de impuritate} & \textbf{Formulă} & \textbf{Valoare maximă ($p = 0{,}5$)} \\
+    \midrule
+    Entropie (biți)        & $-p\log_2 p - (1-p)\log_2(1-p)$ & $1{,}00$ \\
+    Indice Gini            & $2p(1-p)$                       & $0{,}50$ \\
+    Eroare de clasificare  & $1 - \max(p,\,1-p)$             & $0{,}50$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Criterii de oprire, supraînvățare și instabilitate}
+
+Lăsat să crească nelimitat, un arbore poate izola fiecare exemplu de antrenament într-o frunză
+proprie, atingând impuritate nulă, dar supraînvățând masiv (Secțiunea~\ref{sec:biasvar}).
+Creșterea se controlează, de aceea, prin criterii de oprire (eng. \emph{pre-pruning}): adâncimea
+maximă (\texttt{max\_depth}), numărul minim de exemple necesare pentru o divizare
+(\texttt{min\_samples\_split}) și numărul minim de exemple într-o frunză
+(\texttt{min\_samples\_leaf}). O alternativă este \emph{retezarea} ulterioară (eng.
+\emph{post-pruning}), în care arborele este crescut complet și apoi simplificat eliminând
+ramurile care nu îmbunătățesc performanța pe un set de validare~\cite{breiman1984cart}.
+
+Arborii de decizie au avantaje notabile: sunt ușor de interpretat (o predicție corespunde unui
+lanț de reguli ``dacă--atunci''), surprind interacțiuni neliniare între caracteristici și nu
+necesită standardizarea datelor, fiind invarianți la transformări monotone ale
+caracteristicilor~\cite{james2013introduction}. Dezavantajul lor major este \emph{instabilitatea}:
+o mică perturbare a datelor de antrenament poate schimba radical structura arborelui, deci
+arborii individuali au varianță mare. Tocmai această slăbiciune motivează metodele de ansamblu
+din secțiunea următoare, care reduc varianța prin agregarea mai multor arbori.
 
 \section{Pădurea aleatoare (Random Forest)}
 \label{sec:forest}
 
-Pădurea aleatoare este o metodă de tip ansamblu care combină predicțiile mai multor arbori de
-decizie pentru a reduce varianța și a îmbunătăți generalizarea~\cite{breiman2001random}. Doi
-factori de aleatoriu decorelează arborii:
+\subsection{Justificarea teoretică a ansamblurilor}
+
+Metodele de \emph{ansamblu} (eng. \emph{ensemble methods}) combină predicțiile mai multor modele
+de bază pentru a obține un model agregat mai performant decât oricare model
+individual~\cite{dietterich2000ensemble}. Intuiția provine din descompunerea bias--varianță
+(Secțiunea~\ref{sec:biasvar}): media mai multor modele cu bias mic, dar varianță mare reduce
+varianța fără a crește bias-ul. Concret, dacă se mediază $T$ predictori, fiecare cu varianța
+$\sigma^2$ și corelație medie $\rho$ între ei, varianța mediei este:
+\begin{equation}
+  \text{Var}\!\left(\frac{1}{T}\sum_{t=1}^{T} \hat{f}_t\right) =
+  \rho\,\sigma^2 + \frac{1 - \rho}{T}\,\sigma^2 .
+  \label{eq:varens}
+\end{equation}
+Relația~\eqref{eq:varens} arată două lucruri esențiale~\cite{hastie2009elements}: pe măsură ce
+numărul de modele $T$ crește, al doilea termen tinde la zero, dar primul termen rămâne mărginit
+de corelația $\rho$ dintre modele. Prin urmare, beneficiul ansamblului depinde decisiv de
+\emph{decorelarea} modelelor de bază --- a face modelele cât mai diferite între ele este la fel
+de important ca a le face individual bune.
+
+\subsection{Bagging și pădurea aleatoare}
+
+Pădurea aleatoare (eng. \emph{Random Forest}) este o metodă de ansamblu introdusă de
+Breiman~\cite{breiman2001random}, care combină arbori de decizie folosind doi factori de aleator
+pentru a-i decorela (a reduce $\rho$ din relația~\eqref{eq:varens}):
 \begin{itemize}
-  \item \textbf{Bagging} (eng. \emph{bootstrap aggregating}): fiecare arbore este antrenat pe
-    un eșantion bootstrap, obținut prin extragerea cu revenire a $n$ exemple din setul de
-    antrenament.
-  \item \textbf{Subset aleator de caracteristici}: la fiecare divizare se consideră doar un
-    subset aleator de caracteristici (uzual $\sqrt{d}$), nu toate cele $d$ disponibile.
+  \item \textbf{Bagging} (eng. \emph{bootstrap aggregating}): fiecare arbore este antrenat pe un
+    eșantion \emph{bootstrap}, obținut prin extragerea cu revenire a $n$ exemple din setul de
+    antrenament de dimensiune $n$. Astfel, fiecare arbore vede o variantă ușor diferită a datelor.
+  \item \textbf{Subspații aleatoare de caracteristici} (eng. \emph{random subspace}): la fiecare
+    divizare se consideră doar un subset aleator de caracteristici (uzual $\sqrt{d}$ din cele $d$
+    disponibile), nu toate. Această alegere împiedică toți arborii să folosească aceleași câteva
+    caracteristici dominante, decorelându-i suplimentar.
 \end{itemize}
-Predicția finală este media probabilităților produse de toți arborii. Un avantaj important al
-metodei este estimarea \emph{out-of-bag} (OOB): pentru fiecare exemplu, predicția se calculează
-folosind doar arborii care nu l-au inclus în eșantionul bootstrap, oferind o estimare a erorii
-de generalizare fără un set de validare separat~\cite{breiman2001random}.
+Predicția finală este media probabilităților produse de toți arborii. Figura~\ref{fig:bagging}
+ilustrează schematic acest flux. Datorită medierii, pădurea aleatoare păstrează bias-ul mic al
+arborilor individuali, dar reduce substanțial varianța lor, fiind în general robustă, puțin
+sensibilă la hiperparametri și competitivă pe date tabelare~\cite{breiman2001random,
+hastie2009elements}.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      box/.style={draw, rounded corners, align=center, font=\small, minimum height=0.9cm,
+                  minimum width=2.2cm},
+      data/.style={draw, align=center, font=\small, fill=gray!10, minimum height=0.9cm,
+                  minimum width=2.2cm},
+      tree/.style={draw, rounded corners, align=center, font=\small, fill=blue!5,
+                  minimum height=0.9cm, minimum width=2.2cm},
+      outnode/.style={draw, rounded corners, align=center, font=\small, fill=green!8,
+                  minimum height=0.9cm, minimum width=2.2cm},
+      arrow/.style={-{Stealth[length=2mm]}, thick}
+    ]
+    \node[data] (train) {Set de\\antrenament};
+    \node[box, right=1.0cm of train] (b1) {Bootstrap 1};
+    \node[box, below=0.25cm of b1] (b2) {Bootstrap 2};
+    \node[box, below=0.25cm of b2] (b3) {\dots};
+    \node[box, below=0.25cm of b3] (bt) {Bootstrap $T$};
+
+    \node[tree, right=1.0cm of b1] (t1) {Arbore 1};
+    \node[tree, right=1.0cm of b2] (t2) {Arbore 2};
+    \node[tree, right=1.0cm of b3] (t3) {\dots};
+    \node[tree, right=1.0cm of bt] (tt) {Arbore $T$};
+
+    \node[outnode, right=1.2cm of t3] (avg) {Medie\\predicții $\hat{p}$};
+
+    \draw[arrow] (train) -- (b1);
+    \draw[arrow] (train) -- (b2);
+    \draw[arrow] (train) -- (bt);
+    \draw[arrow] (b1) -- (t1);
+    \draw[arrow] (b2) -- (t2);
+    \draw[arrow] (bt) -- (tt);
+    \draw[arrow] (t1) -- (avg);
+    \draw[arrow] (t2) -- (avg);
+    \draw[arrow] (tt) -- (avg);
+  \end{tikzpicture}
+  \caption{Schema pădurii aleatoare: din setul de antrenament se extrag $T$ eșantioane bootstrap,
+    pe fiecare se crește un arbore cu subset aleator de caracteristici, iar predicțiile se
+    mediază.}
+  \label{fig:bagging}
+\end{figure}
+
+\subsection{Estimarea out-of-bag și importanța caracteristicilor}
+
+Un avantaj practic al bagging-ului este estimarea \emph{out-of-bag} (OOB). Deoarece un eșantion
+bootstrap omite, în medie, aproximativ 37\% dintre exemple ($\lim_{n\to\infty}(1 - 1/n)^n = e^{-1}$),
+fiecare exemplu este ``în afara sacului'' pentru o parte dintre arbori. Predicția OOB a unui
+exemplu se calculează folosind doar arborii care nu l-au inclus în eșantionul lor, oferind astfel
+o estimare a erorii de generalizare \emph{fără} a fi nevoie de un set de validare
+separat~\cite{breiman2001random}.
+
+Pădurea aleatoare oferă și o măsură de \emph{importanță a caracteristicilor}. Cea folosită aici
+este reducerea medie de impuritate (eng. \emph{mean decrease in impurity}, MDI): pentru fiecare
+caracteristică se însumează câștigurile de informație ale divizărilor care o folosesc, ponderate
+cu numărul de exemple din nod, mediate apoi peste toți arborii și normalizate. Această măsură
+adaugă un grad de interpretabilitate unui model altfel de tip ``cutie neagră'' și este analizată
+în Capitolul~\ref{cap:rezultate}.
+
+\subsection{Alte metode de ansamblu}
+
+Pe lângă bagging, a doua mare familie de ansambluri este \emph{boosting}-ul, care antrenează
+modelele secvențial, fiecare model nou concentrându-se asupra exemplelor greșite de cele
+anterioare. Algoritmul AdaBoost~\cite{freund1997decision} și, ulterior, \emph{gradient
+boosting}~\cite{friedman2001greedy} --- cu implementări eficiente precum
+XGBoost~\cite{chen2016xgboost} --- sunt printre cele mai performante metode pe date tabelare.
+Spre deosebire de bagging, care reduce în principal varianța, boosting-ul reduce și bias-ul, dar
+este mai sensibil la zgomot și la reglarea hiperparametrilor. În această lucrare s-a ales pădurea
+aleatoare ca metodă de ansamblu reprezentativă, lăsând boosting-ul ca direcție de dezvoltare
+ulterioară (Capitolul~\ref{cap:concluzii}).
 
 \section{Ingineria caracteristicilor și scurgerea de informație}
 \label{sec:leakage}
 
-Calitatea unui model de învățare automată depinde decisiv de caracteristicile de
-intrare~\cite{james2013introduction}. În problemele cu o componentă temporală, precum
-predicția unei curse viitoare, apare riscul de \emph{scurgere de informație}: utilizarea, la
-antrenare, a unor informații care nu ar fi disponibile în momentul predicției reale. De
-exemplu, folosirea numărului total de puncte acumulate de un pilot într-un sezon ar include
-rezultatul cursei pe care încercăm să o prezicem.
+Calitatea unui model de învățare automată depinde decisiv de caracteristicile de intrare ---
+adesea mai mult decât de alegerea algoritmului~\cite{james2013introduction}. \emph{Ingineria
+caracteristicilor} (eng. \emph{feature engineering}) este procesul de transformare a datelor
+brute în variabile care expun cât mai clar structura relevantă pentru predicție. Pentru
+predicția podiumului, datele brute (poziții, puncte, timpi) sunt agregate în indicatori de formă,
+de forță a echipei și de istoric pe circuit, descriși în Capitolul~\ref{cap:rezolvare}.
 
-Pentru a evita acest fenomen, toate caracteristicile trebuie să fie \emph{strict cauzale},
-adică să folosească exclusiv informații anterioare cursei prezise. Strategia adoptată constă
-în procesarea curselor în ordine cronologică și menținerea unei ``stări'' istorice, din care
-se calculează caracteristicile înainte de a fi actualizată cu rezultatul cursei curente.
+În problemele cu o componentă temporală, precum predicția unei curse viitoare, apare un risc
+metodologic major: \emph{scurgerea de informație} (eng. \emph{data leakage}). Aceasta înseamnă
+utilizarea, la antrenare sau la calculul caracteristicilor, a unor informații care nu ar fi
+disponibile în momentul predicției reale. Scurgerea conduce la o supraestimare optimistă a
+performanței în experiment, urmată de o prăbușire a acesteia în exploatarea reală. Se disting mai
+multe forme de scurgere relevante pentru această lucrare:
+\begin{itemize}
+  \item \textbf{Scurgerea țintei} (eng. \emph{target leakage}): o caracteristică încorporează,
+    direct sau indirect, eticheta pe care încercăm să o prezicem. De exemplu, folosirea
+    numărului total de puncte acumulate de un pilot \emph{într-un sezon complet} ar include
+    punctele din cursa pe care vrem să o prezicem.
+  \item \textbf{Scurgerea temporală} (eng. \emph{look-ahead bias}): folosirea unor date din
+    viitorul cursei prezise, chiar dacă nu provin direct din etichetă (de pildă, media de sosire
+    calculată pe întregul sezon, inclusiv curse viitoare).
+  \item \textbf{Scurgerea prin preprocesare}: estimarea unor parametri de transformare (precum
+    media și abaterea standard pentru standardizare) pe întregul set de date, inclusiv pe cel de
+    test, în loc de a-i estima doar pe antrenament (Secțiunea~\ref{sec:logreg}).
+\end{itemize}
+
+Pentru a evita aceste fenomene, toate caracteristicile trebuie să fie \emph{strict cauzale},
+adică să folosească exclusiv informații anterioare cursei prezise. Strategia adoptată constă în
+procesarea curselor în ordine cronologică și menținerea unei ``stări'' istorice (sume și medii
+rulante), din care se calculează caracteristicile cursei curente \emph{înainte} de a fi
+actualizată cu rezultatul acelei curse. Acest principiu cauzal, aplicat consecvent, este condiția
+necesară pentru ca estimarea performanței din Secțiunea~\ref{sec:validare} să fie corectă.
 
 \section{Validarea și estimarea performanței}
 \label{sec:validare}
 
-Estimarea corectă a performanței necesită evaluarea modelului pe date care nu au fost folosite
-la antrenare~\cite{kohavi1995study}. Validarea încrucișată clasică (\emph{k-fold}) presupune
-însă că exemplele sunt independente și interschimbabile, ceea ce nu este valabil pentru date
-temporale: nu putem antrena pe curse viitoare pentru a prezice curse trecute. De aceea, în
-această lucrare se folosește o \emph{validare temporală pe ani} (eng. \emph{rolling
-cross-year}): pentru fiecare sezon de test $S$, modelul este antrenat pe toate sezoanele
-anterioare ($< S$) și evaluat pe sezonul $S$. Astfel se prezice mereu ``viitorul'' cu modele
-antrenate doar pe ``trecut'', eliminând scurgerea de informație temporală.
+Estimarea corectă a performanței necesită evaluarea modelului pe date care nu au fost folosite la
+antrenare~\cite{kohavi1995study}. Cea mai simplă schemă este împărțirea datelor în trei seturi
+disjuncte: un set de \emph{antrenament}, pe care se învață parametrii modelului; un set de
+\emph{validare}, pe care se aleg hiperparametrii și se compară variante de model; și un set de
+\emph{test}, folosit o singură dată, la final, pentru a raporta o estimare nepărtinitoare a
+performanței~\cite{hastie2009elements}. Separarea validării de test este esențială: dacă
+hiperparametrii ar fi reglați direct pe setul de test, estimarea finală ar deveni optimistă.
+
+Pentru a folosi mai eficient datele limitate, se utilizează frecvent \emph{validarea încrucișată}
+$k$-fold: setul este împărțit în $k$ părți, modelul fiind antrenat pe $k-1$ și evaluat pe partea
+rămasă, rotativ, performanța raportată fiind media celor $k$ estimări~\cite{kohavi1995study}.
+Această procedură presupune însă că exemplele sunt \emph{independente și interschimbabile} (eng.
+\emph{i.i.d.}), ipoteză care \textbf{nu} este valabilă pentru date temporale. A antrena pe curse
+viitoare pentru a prezice curse trecute ar reprezenta o formă de scurgere temporală
+(Secțiunea~\ref{sec:leakage}) și ar supraestima performanța, întrucât amestecarea aleatoare a
+exemplelor în pliuri rupe ordinea cronologică~\cite{bergmeir2012use}.
+
+Soluția consacrată pentru serii temporale este \emph{validarea cu origine glisantă} (eng.
+\emph{rolling-origin} sau \emph{walk-forward validation}), în care modelul este întotdeauna
+antrenat pe trecut și evaluat pe viitor, originea de separare avansând în timp~\cite{bergmeir2012use}.
+În această lucrare se folosește o variantă pe ani, cu separare strictă în trei seturi: pentru
+fiecare sezon de test $S$, modelul este antrenat pe toate sezoanele până la $S-2$ inclusiv (adică
+$< S-1$), sezonul $S-1$ este ținut deoparte ca set de \emph{validare}, iar performanța finală se
+raportează pe sezonul nevăzut $S$ (setul de \emph{test}). Astfel se prezice mereu ``viitorul'' cu
+modele antrenate doar pe ``trecut'', iar sezonul de validare rămâne complet separat de cel de
+antrenare, eliminând scurgerea de informație temporală. Granularitatea pe sezon (și nu pe cursă)
+este firească pentru Formula 1, deoarece regulamentul tehnic și componența echipelor sunt stabile
+în interiorul unui sezon, dar se pot modifica semnificativ între sezoane.
 
 \section{Metrici de evaluare}
 \label{sec:metrici}
 
-Pentru clasificarea binară, plecând de la numărul de adevărat pozitive (TP), fals pozitive
-(FP), adevărat negative (TN) și fals negative (FN), se definesc:
+Evaluarea unui clasificator binar pornește de la \emph{matricea de confuzie}
+(Tabelul~\ref{tab:confuzie}), care încrucișează eticheta reală cu cea prezisă în patru categorii:
+adevărat pozitive (TP), fals pozitive (FP), adevărat negative (TN) și fals negative
+(FN)~\cite{fawcett2006roc}. Pe baza acestor patru numere se construiesc toate metricile de
+clasificare folosite în lucrare.
+
+\begin{table}[htbp]
+  \caption{Matricea de confuzie pentru clasificarea binară a etichetei de podium.}
+  \label{tab:confuzie}
+  \begin{tabular}{l c c}
+    \toprule
+     & \textbf{Prezis: podium} & \textbf{Prezis: non-podium} \\
+    \midrule
+    \textbf{Real: podium}     & Adevărat pozitiv (TP) & Fals negativ (FN) \\
+    \textbf{Real: non-podium} & Fals pozitiv (FP)     & Adevărat negativ (TN) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Plecând de la aceste mărimi, se definesc:
 \begin{align}
   \text{Acuratețe} &= \frac{TP + TN}{TP + TN + FP + FN}, &
   \text{Precizie} &= \frac{TP}{TP + FP}, \label{eq:acc}\\
@@ -593,43 +1018,156 @@ Pentru clasificarea binară, plecând de la numărul de adevărat pozitive (TP),
   F_1 &= \frac{2 \cdot \text{Precizie} \cdot \text{Recall}}{\text{Precizie} + \text{Recall}}.
   \label{eq:f1}
 \end{align}
-Scorul $F_1$ este media armonică dintre precizie și recall și este preferat acurateței în
-prezența dezechilibrului de clase. Curba ROC reprezintă rata adevărat pozitivelor în funcție
-de rata fals pozitivelor, la variația pragului de decizie; aria sub această curbă (AUC) este o
-măsură agregată a capacității de discriminare~\cite{fawcett2006roc}. Curba Precision-Recall și
-aria sub ea (\emph{average precision}, AP) sunt mai informative decât ROC atunci când clasa
-pozitivă este rară~\cite{saito2015precision}. În fine, \emph{curba de calibrare} (eng.
-\emph{reliability diagram}) compară probabilitatea medie prezisă cu frecvența reală observată,
-indicând cât de bine pot fi interpretate probabilitățile ca atare~\cite{niculescu2005predicting}.
+\emph{Precizia} răspunde la întrebarea ``dintre piloții preziși pe podium, câți chiar au ajuns
+acolo?'', iar \emph{recall-ul} la ``dintre piloții care au ajuns pe podium, câți au fost
+identificați?''. Cele două sunt în tensiune, iar scorul $F_1$ --- media lor armonică --- le
+echilibrează într-o singură valoare. În prezența dezechilibrului de clase
+(Secțiunea~\ref{sec:dezechilibru}), $F_1$ este preferat acurateței, deoarece nu este dominat de
+clasa majoritară.
 
-Pe lângă metricile de clasificare, soluția definește metrici specifice problemei, calculate la
-nivel de cursă și apoi mediate: \emph{rata de nimerire a podiumului} (câți dintre cei trei
-piloți preziși se regăsesc în podiumul real), acuratețea predicției câștigătorului și
-suprapunerea cu primii trei din clasamentul de campionat.
+O modalitate de evaluare independentă de pragul de decizie este \emph{curba ROC} (eng.
+\emph{Receiver Operating Characteristic}), care reprezintă rata de adevărat pozitive în funcție
+de rata de fals pozitive, pe măsură ce pragul variază; aria de sub curbă (AUC) rezumă această
+performanță într-un singur număr~\cite{fawcett2006roc}. Totuși, atunci când clasa pozitivă este
+rară, curba precizie--recall este mai informativă decât curba ROC, fiindcă reflectă mai fidel
+costul fals-pozitivelor (Secțiunea~\ref{sec:dezechilibru})~\cite{saito2015precision}.
+
+Pe lângă metricile generale de clasificare, soluția definește metrici \emph{specifice problemei},
+calculate la nivel de cursă și apoi mediate pe sezon. Acestea sunt necesare deoarece obiectivul
+real nu este eticheta individuală a fiecărui pilot, ci podiumul corect al fiecărei curse. Pentru
+fiecare cursă, podiumul prezis (primii trei piloți după probabilitatea de podium) este comparat
+cu podiumul real (primii trei după poziția finală):
+\begin{itemize}
+  \item \emph{rata de nimerire a podiumului} (eng. \emph{podium hit rate}) --- fracția medie a
+    celor trei piloți preziși care se regăsesc în podiumul real;
+  \item \emph{podiumul exact} (eng. \emph{exact podium}) --- fracția curselor în care mulțimea
+    celor trei piloți preziși coincide exact cu cea reală (indiferent de ordine);
+  \item \emph{acuratețea câștigătorului} (Top-1) --- fracția curselor în care pilotul prezis pe
+    prima poziție este cel care câștigă efectiv cursa.
+\end{itemize}
+Aceste metrici corespund evaluării de tip ``top-$k$'' din regăsirea informației și ordonare
+(Secțiunea~\ref{sec:clasificare})~\cite{liu2009learning}. Împreună cu acuratețea clasificării
+binare, ele stau la baza studiului comparativ din Capitolul~\ref{cap:rezultate}.
+
+\section{Calibrarea probabilităților}
+\label{sec:calibrare}
+
+Deoarece soluția folosește probabilitățile $\hat{p}$ atât pentru ordonarea piloților, cât și
+pentru agregarea într-un clasament de campionat estimat, contează nu doar \emph{ordinea} indusă
+de probabilități, ci și \emph{valoarea} lor absolută. Un clasificator este \emph{calibrat} dacă,
+dintre exemplele cărora le atribuie o probabilitate $\hat{p}$, o fracție de aproximativ $\hat{p}$
+sunt efectiv pozitive~\cite{niculescu2005predicting}. Calibrarea nu coincide cu puterea
+discriminativă: un model poate ordona corect exemplele, dar produce probabilități sistematic prea
+mari sau prea mici.
+
+Niculescu-Mizil și Caruana~\cite{niculescu2005predicting} arată că diferite familii de modele au
+comportamente de calibrare distincte: regresia logistică, antrenată direct prin minimizarea
+entropiei încrucișate, produce în mod natural probabilități bine calibrate, în timp ce
+metodele de ansamblu bazate pe arbori pot prezenta abateri sistematice. Atunci când calibrarea
+este importantă, probabilitățile pot fi corectate ulterior prin tehnici precum scalarea Platt
+(o regresie logistică aplicată scorurilor) sau regresia izotonică. În această lucrare,
+probabilitățile sunt folosite predominant ca scoruri de ordonare, ceea ce reduce sensibilitatea
+la o calibrare imperfectă; calibrarea explicită rămâne o direcție de îmbunătățire
+(Capitolul~\ref{cap:concluzii}).
+
+\section{Sinteză comparativă a algoritmilor studiați}
+\label{sec:sinteza}
+
+Cele trei modele alese acoperă, intenționat, un spectru de complexitate și de compromisuri
+bias--varianță (Secțiunea~\ref{sec:biasvar}). Tabelul~\ref{tab:comparatie} sintetizează
+proprietățile lor teoretice relevante pentru studiul comparativ din Capitolul~\ref{cap:rezultate}.
+
+\begin{table}[htbp]
+  \caption{Sinteză comparativă a proprietăților teoretice ale celor trei algoritmi.}
+  \label{tab:comparatie}
+  \begin{tabular}{l l l l}
+    \toprule
+    \textbf{Proprietate} & \textbf{Regresie logistică} & \textbf{Arbore de decizie} &
+    \textbf{Pădure aleatoare} \\
+    \midrule
+    Tip graniță         & liniară            & neliniară            & neliniară          \\
+    Bias / varianță     & bias mare / var.~mică & bias mic / var.~mare & bias mic / var.~redusă \\
+    Probabilitate       & sigmoid (calibrată)  & fracție în frunză   & medie pe arbori    \\
+    Interpretabilitate  & ridicată (ponderi)   & ridicată (reguli)   & medie (importanțe) \\
+    Standardizare       & necesară             & nu                  & nu                 \\
+    Regularizare        & $L_2$ pe ponderi     & oprire / retezare   & mediere (ansamblu) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Lucrări conexe}
+\label{sec:conexe}
 
-Aplicarea învățării automate la predicția rezultatelor sportive a fost studiată pe larg.
-Bunker și Thabtah~\cite{bunker2019machine} propun un cadru general pentru predicția
-rezultatelor sportive și subliniază importanța ingineriei caracteristicilor și a evaluării
-temporale. Metodele de tip ansamblu, în special pădurile aleatoare, sunt frecvent raportate ca
-fiind robuste și competitive pe date tabulare~\cite{breiman2001random, hastie2009elements}.
-Lucrarea de față se diferențiază prin implementarea integrală a algoritmilor și prin accentul
-pus pe analiza comparativă a hiperparametrilor și a costului de calcul.
+Aplicarea învățării automate la predicția rezultatelor sportive a fost studiată pe larg. Bunker
+și Thabtah~\cite{bunker2019machine} propun un cadru general (eng. \emph{framework}) pentru
+predicția rezultatelor sportive, în care subliniază importanța ingineriei caracteristicilor și a
+unei evaluări care respectă ordinea cronologică a meciurilor --- exact principiile aplicate și în
+această lucrare. Autorii observă că metodele bazate pe arbori și rețelele neuronale sunt cele mai
+frecvent folosite, iar acuratețea simplă este adesea o metrică insuficientă.
+
+În privința algoritmilor, metodele de tip ansamblu --- în special pădurile aleatoare --- sunt
+raportate constant ca robuste și competitive pe date tabelare~\cite{breiman2001random,
+hastie2009elements}, iar metodele de tip \emph{gradient boosting} domină frecvent competițiile pe
+astfel de date~\cite{friedman2001greedy, chen2016xgboost}. O abordare alternativă pentru
+clasificarea pe date cu multe caracteristici o constituie mașinile cu vectori suport (eng.
+\emph{Support Vector Machines})~\cite{cortes1995support}, care caută hiperplanul cu marginea
+maximă între clase; acestea nu produc însă, în mod nativ, probabilități, ceea ce le face mai puțin
+directe pentru reformularea de tip ordonare folosită aici.
+
+Din punct de vedere metodologic, problema scurgerii de informație și a validării temporale a
+primit o atenție crescândă: Bergmeir și Benítez~\cite{bergmeir2012use} demonstrează empiric de ce
+validarea încrucișată clasică este inadecvată pentru serii temporale și recomandă scheme de tip
+walk-forward, iar literatura privind clasele dezechilibrate~\cite{he2009learning, chawla2002smote,
+saito2015precision} fundamentează alegerea metricilor și a tehnicilor de atenuare a
+dezechilibrului.
+
+Față de aceste lucrări, contribuția de față se diferențiază prin trei aspecte: (i) implementarea
+\emph{integrală}, de la zero, a celor trei algoritmi, ceea ce permite controlul complet și
+înțelegerea în profunzime a mecanismelor lor; (ii) o evaluare temporală riguroasă, cu separare în
+antrenare, validare și test pe ani, care elimină scurgerea de informație; și (iii) folosirea unor
+metrici specifice problemei, calculate la nivel de cursă, alături de o analiză a efectului
+datelor disponibile in-sezon (Capitolul~\ref{cap:rezultate}).
 
 % =============================================================================
 \chapter{Rezolvarea temei de proiect}
 \label{cap:rezolvare}
 
+Acest capitol descrie, în ordine logică, etapele parcurse în rezolvarea temei și justifică
+fiecare decizie de proiectare. Firul expunerii urmează drumul datelor prin sistem: pornind de la
+arhitectura de ansamblu (Secțiunea~\ref{sec:arhitectura}) și de la tehnologiile alese
+(Secțiunea~\ref{sec:tehnologii}), se trece prin sursa de date (Secțiunea~\ref{sec:date}),
+construirea tabelului de rezultate (Secțiunea~\ref{sec:construire}) și ingineria caracteristicilor
+cauzale (Secțiunea~\ref{sec:features}), apoi prin implementarea celor trei modele
+(Secțiunea~\ref{sec:implmodele}), transformarea probabilităților în predicții de podium și
+clasament (Secțiunea~\ref{sec:predictie}), procedura de validare temporală
+(Secțiunea~\ref{sec:validimpl}), analiza antrenării incrementale in-sezon
+(Secțiunea~\ref{sec:insezon}), metricile și instrumentația experimentală
+(Secțiunea~\ref{sec:instrumentatie}) și, în final, interfața în linie de comandă care leagă toate
+componentele (Secțiunea~\ref{sec:cli}). Pentru fiecare etapă se explică nu doar \emph{ce} a fost
+implementat, ci și \emph{de ce} --- în special raportat la cele două cerințe metodologice centrale
+ale lucrării: implementarea de la zero a algoritmilor și eliminarea completă a scurgerii de
+informație (Secțiunea~\ref{sec:leakage}).
+
 \section{Arhitectura sistemului}
 \label{sec:arhitectura}
 
-Sistemul este organizat ca o succesiune de etape (eng. \emph{pipeline}), de la datele brute
-până la predicții și evaluare. Figura~\ref{fig:arhitectura} prezintă schema de arhitectură:
+Sistemul este organizat ca o succesiune de etape (eng. \emph{pipeline}), de la datele brute până
+la predicții și evaluare. Această structură liniară a fost aleasă deoarece reflectă fidel
+dependențele dintre etape: fiecare etapă consumă ieșirea celei precedente și produce o intrare
+clar definită pentru următoarea. Figura~\ref{fig:arhitectura} prezintă schema de arhitectură:
 datele sunt încărcate din memoria cache locală, transformate într-un tabel de rezultate, apoi
 îmbogățite cu caracteristici cauzale; pe acest set se antrenează cele trei modele, ale căror
-probabilități sunt folosite atât pentru predicția podiumului per cursă, cât și pentru
-agregarea în clasament și pentru modulul de evaluare și vizualizare.
+probabilități sunt folosite atât pentru predicția podiumului per cursă, cât și pentru agregarea
+în clasament și pentru modulul de evaluare și vizualizare.
+
+Separarea pe etape distincte aduce trei avantaje practice. În primul rând, fiecare etapă poate fi
+testată și validată independent --- de exemplu, corectitudinea cauzală a caracteristicilor poate
+fi verificată izolat, fără a antrena vreun model. În al doilea rând, etapele costisitoare
+(încărcarea datelor și ingineria caracteristicilor) sunt executate o singură dată, iar rezultatul
+lor este memorat pe disc (Secțiunea~\ref{sec:reproductibilitate}), astfel încât experimentele
+repetate cu modele diferite refolosesc același set de caracteristici. În al treilea rând,
+modularitatea permite înlocuirea unei componente (de pildă, adăugarea unui al patrulea model)
+fără a modifica restul sistemului.
 
 \begin{figure}[htbp]
   \centering
@@ -660,38 +1198,160 @@ agregarea în clasament și pentru modulul de evaluare și vizualizare.
   \label{fig:arhitectura}
 \end{figure}
 
-Implementarea este realizată în limbajul Python, organizată în pachetul \texttt{f1pred}.
-Bibliotecile externe sunt folosite strict pentru sarcini auxiliare: NumPy~\cite{harris2020numpy}
-pentru algebra vectorizată, pandas~\cite{mckinney2010pandas} pentru manipularea datelor
-tabelare, matplotlib~\cite{hunter2007matplotlib} pentru grafice și
-FastF1~\cite{fastf1} pentru încărcarea datelor. Niciuna nu este o bibliotecă de învățare
-automată; toți algoritmii, metricile și procedura de antrenare sunt implementați manual.
+\section{Tehnologii folosite și organizarea codului}
+\label{sec:tehnologii}
+
+Implementarea este realizată în limbajul Python, ales pentru ecosistemul său bogat de biblioteci
+de calcul numeric și pentru lizibilitatea care facilitează expunerea algoritmilor. Codul este
+organizat ca un pachet, \texttt{f1pred}, structurat pe subpachete corespunzătoare etapelor din
+Figura~\ref{fig:arhitectura}; Tabelul~\ref{tab:module} rezumă această organizare. Separarea pe
+module urmărește principiul responsabilității unice: fiecare modul rezolvă o singură etapă și
+expune o interfață restrânsă către celelalte.
+
+\begin{table}[htbp]
+  \caption{Organizarea pe module a pachetului \texttt{f1pred}.}
+  \label{tab:module}
+  \begin{tabular}{l l}
+    \toprule
+    \textbf{Modul} & \textbf{Responsabilitate} \\
+    \midrule
+    \texttt{data/loader}          & acces de nivel jos la cache-ul FastF1 (sesiuni R și Q, vreme) \\
+    \texttt{data/build\_dataset}  & asamblarea tabelului ``lung'' de rezultate \\
+    \texttt{features/engineering} & ingineria caracteristicilor cauzale și eticheta \\
+    \texttt{models/}              & cele trei modele (\texttt{logreg}, \texttt{tree}, \texttt{forest}) \\
+    \texttt{predict/}             & podium per cursă și clasament de campionat \\
+    \texttt{evaluation/}          & metrici și validarea temporală \\
+    \texttt{viz/plots}            & generarea graficelor \\
+    \texttt{config}               & căi, sezoane, hiperparametri, sistemul de puncte \\
+    \texttt{cli}                  & interfața în linie de comandă \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Bibliotecile externe sunt folosite strict pentru sarcini auxiliare, niciuna nefiind o bibliotecă
+de învățare automată: NumPy~\cite{harris2020numpy} pentru algebra vectorizată (matrice, sume
+cumulative, operații pe vectori), pandas~\cite{mckinney2010pandas} pentru manipularea datelor
+tabelare și gruparea pe curse, matplotlib~\cite{hunter2007matplotlib} pentru grafice și
+FastF1~\cite{fastf1} pentru accesul la datele Formula 1. Această delimitare este o cerință
+metodologică explicită a temei: toți algoritmii de învățare, criteriile de divizare, metricile și
+procedura de antrenare sunt implementați manual, peste NumPy. Renunțarea la o bibliotecă consacrată
+precum scikit-learn~\cite{pedregosa2011scikit} are un cost --- mai mult cod de scris și de
+testat --- dar oferă două câștiguri esențiale pentru o lucrare didactică: controlul complet asupra
+fiecărui detaliu (de la inițializarea ponderilor până la departajarea egalităților) și
+transparența mecanismelor, care altfel ar rămâne ascunse în spatele apelurilor de bibliotecă.
 
 \section{Sursa de date}
+\label{sec:date}
 
-Datele provin din interfața de programare FastF1~\cite{fastf1}, care oferă acces la
-rezultatele oficiale și la informațiile de cronometraj din Formula 1. Au fost folosite opt
-sezoane (2018--2025), însumând aproximativ 3500 de rezultate (perechi cursă--pilot). Pentru
-reproductibilitate și pentru a elimina dependența de conexiunea la internet, datele sunt
-citite dintr-o memorie cache locală, în mod strict offline.
+Datele provin din interfața de programare FastF1~\cite{fastf1}, o bibliotecă Python care oferă
+acces la rezultatele oficiale, la programul competițional și la informațiile de cronometraj din
+Formula 1, agregând surse precum API-ul Ergast/Jolpica și fluxul de date al competiției. Au fost
+folosite opt sezoane consecutive, 2018--2025, însumând 3458 de rezultate (perechi cursă--pilot)
+provenite de la 43 de piloți și 19 echipe. Intervalul a fost ales pentru a fi suficient de lung
+încât să permită validarea temporală pe mai multe sezoane (Secțiunea~\ref{sec:validimpl}) și,
+totodată, suficient de recent încât regulamentul tehnic și sistemul de punctare să fie relativ
+omogene.
+
+Pentru fiecare rundă se încarcă două sesiuni: cursa propriu-zisă (codul \texttt{R}), din care se
+extrag poziția pe grilă, poziția finală, statusul de clasare, punctele și echipa fiecărui pilot,
+și sesiunea de calificări (codul \texttt{Q}), din care se preia poziția în calificări. La acestea
+se adaugă un rezumat al condițiilor meteo (prezența ploii, temperatura pistei și a aerului),
+calculat din datele meteorologice ale sesiunii. Sesiunile indisponibile în cache (de exemplu,
+curse anulate sau sesiuni nedescărcate) sunt sărite cu un avertisment, fără a întrerupe procesul.
+
+O decizie de proiectare importantă este accesul \emph{strict offline}: FastF1 este configurat să
+citească exclusiv dintr-o memorie cache locală, fără nicio cerere de rețea. Această alegere are o
+dublă justificare. Pe de o parte, asigură \emph{reproductibilitatea}: rezultatele experimentelor
+nu depind de momentul rulării sau de o eventuală modificare a datelor la sursă. Pe de altă parte,
+elimină dependența de conexiunea la internet și evită limitarea de rată (eng. \emph{rate
+limiting}) impusă de API-ul public, care altfel ar întrerupe încărcarea unui volum mare de
+sesiuni.
 
 \section{Construirea setului de date}
+\label{sec:construire}
 
-Prima etapă transformă datele brute într-un tabel ``lung'', cu o linie pentru fiecare pereche
-(sezon, rundă, pilot), conținând poziția pe grilă, poziția în calificări, poziția finală,
-punctele, echipa și condițiile meteo. Tabelul este sortat cronologic --- pas esențial pentru
-calculul corect al caracteristicilor rulante --- și salvat în format Parquet pentru reutilizare
-rapidă.
+Prima etapă transformă datele brute, împrăștiate pe sesiuni, într-un singur tabel ``lung'' (eng.
+\emph{long format}), cu o linie pentru fiecare pereche (sezon, rundă, pilot). Formatul lung a fost
+preferat unuia ``lat'' (o coloană per pilot) deoarece numărul de piloți variază de la sezon la
+sezon, iar reprezentarea pe linii independente se potrivește natural atât antrenării modelelor
+(fiecare linie este un exemplu), cât și gardării pe curse necesare la evaluare. Tabelul conține
+coloanele rezumate în Tabelul~\ref{tab:coloane}.
+
+\begin{table}[htbp]
+  \caption{Coloanele tabelului ``lung'' de rezultate (intrarea pentru ingineria caracteristicilor).}
+  \label{tab:coloane}
+  \begin{tabular}{l l}
+    \toprule
+    \textbf{Coloană} & \textbf{Descriere} \\
+    \midrule
+    \texttt{season}, \texttt{round}     & sezonul și runda (identifică unic o cursă) \\
+    \texttt{driver}, \texttt{team}      & codul pilotului și numele echipei \\
+    \texttt{grid}, \texttt{quali\_pos}  & poziția pe grilă și poziția în calificări \\
+    \texttt{position}                   & poziția finală în cursă \\
+    \texttt{status}, \texttt{finished}  & statusul de clasare și indicatorul de finalizare \\
+    \texttt{points}                     & punctele obținute în cursă \\
+    \texttt{is\_sprint\_weekend}        & 1 dacă weekendul a inclus o cursă de sprint \\
+    \texttt{rain}, \texttt{track\_temp}, \texttt{air\_temp} & rezumatul condițiilor meteo \\
+    \texttt{event\_name}, \texttt{circuit}, \texttt{event\_date} & contextul evenimentului \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Două aspecte merită justificate. Primul este tratarea \emph{abandonurilor} (eng. \emph{DNF --- Did
+Not Finish}): din câmpul textual de status oferit de FastF1 se derivă un indicator binar de
+finalizare, considerând clasat orice pilot al cărui status este ``Finished'' sau de forma
+``+1 tur'' etc.; acest indicator alimentează ulterior caracteristica de rată a abandonurilor
+(Secțiunea~\ref{sec:features}). Al doilea este \emph{sortarea cronologică} stabilă, după (sezon,
+rundă, poziție): aceasta nu este o simplă convenție de afișare, ci o precondiție obligatorie pentru
+calculul corect al caracteristicilor rulante --- procesarea curselor în ordine garantează că
+starea istorică din care se derivă o caracteristică conține exclusiv trecutul
+(Secțiunea~\ref{sec:features}). În fine, tabelul rezultat este salvat în format Parquet, un format
+binar coloană cu compresie, ales pentru viteza de citire și pentru păstrarea tipurilor de date,
+astfel încât etapele ulterioare să îl poată reutiliza fără a relua încărcarea din cache.
+
+\section{Analiza exploratorie a setului de date}
+\label{sec:explorare}
+
+Înainte de ingineria caracteristicilor, o scurtă analiză exploratorie justifică alegerile
+metodologice ulterioare. Tabelul~\ref{tab:sezoane} prezintă numărul de curse și de rezultate pe
+fiecare sezon. Se remarcă două aspecte. Primul este variabilitatea numărului de curse: de la 17 în
+2020 (sezon scurtat din cauza pandemiei) până la 24 în 2024 și 2025; această neuniformitate
+confirmă oportunitatea formatului ``lung'', care nu impune un număr fix de curse pe sezon. Al
+doilea este consecvența ratei de podium în jurul valorii de $0{,}15$, dictată aritmetic de raportul
+dintre cele trei locuri de podium și cei aproximativ douăzeci de piloți din fiecare cursă.
+
+\begin{table}[htbp]
+  \caption{Distribuția curselor și a rezultatelor pe sezoane.}
+  \label{tab:sezoane}
+  \begin{tabular}{l c c c c c c c c c}
+    \toprule
+    \textbf{Sezon} & 2018 & 2019 & 2020 & 2021 & 2022 & 2023 & 2024 & 2025 & \textbf{Total} \\
+    \midrule
+    Curse       & 21 & 21 & 17 & 22 & 22 & 22 & 24 & 24 & 173 \\
+    Rezultate   & \multicolumn{8}{c}{(perechi cursă--pilot)} & 3458 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Pe întregul set, eticheta de podium are media $0{,}150$, ceea ce înseamnă că un clasificator
+trivial care nu prezice niciodată un podium ar obține o acuratețe de circa 85\% --- reper care
+fundamentează discuția privind dezechilibrul de clase (Secțiunea~\ref{sec:dezechilibru}) și alegerea
+metricilor specifice problemei (Secțiunea~\ref{sec:metrici}). Tot această analiză confirmă rolul
+dominant al poziției de start: marea majoritate a piloților care urcă pe podium pleacă din primele
+rânduri ale grilei, observație care motivează includerea poziției pe grilă și a indicatorilor
+derivați printre caracteristicile cele mai importante (Secțiunea~\ref{sec:features}).
 
 \section{Ingineria caracteristicilor cauzale}
 \label{sec:features}
 
-Pe baza considerentelor din Secțiunea~\ref{sec:leakage}, au fost construite 30 de
-caracteristici numerice, toate strict cauzale. Acestea se grupează în următoarele categorii,
+Aceasta este etapa centrală a întregii soluții, deoarece de calitatea și corectitudinea
+caracteristicilor depinde atât performanța modelelor, cât și validitatea metodologică a întregului
+studiu. Pe baza considerentelor din Secțiunea~\ref{sec:leakage}, au fost construite 29 de
+caracteristici numerice, toate \emph{strict cauzale}. Acestea se grupează în șase categorii,
 rezumate în Tabelul~\ref{tab:features}: poziția pe grilă și în calificări (cunoscute înainte de
-cursă), forma rulantă a pilotului (medii pe ultimele cinci curse), statistici cumulate la nivel
-de sezon, forța echipei, istoricul pe circuitul respectiv și contextul cursei (experiență,
-condiții meteo).
+cursă), forma rulantă a pilotului (medii pe ultimele cinci curse), statistici cumulate la nivel de
+sezon, forța echipei, istoricul pe circuitul respectiv și contextul cursei (experiență, condiții
+meteo).
 
 \begin{table}[htbp]
   \caption{Categoriile de caracteristici folosite de modele.}
@@ -705,17 +1365,48 @@ condiții meteo).
     Sezon-to-date pilot    & puncte, poziție, podiumuri, victorii, curse             & 5  \\
     Forța echipei          & formă echipă, puncte echipă, poziție echipă             & 4  \\
     Istoric circuit        & medie sosire pilot / echipă, rată podium pe circuit     & 3  \\
-    Context                & experiență, rundă, weekend cu sprint, vreme             & 7  \\
+    Context                & experiență, rundă, weekend cu sprint, vreme             & 6  \\
     \midrule
-    \textbf{Total}         &                                                         & \textbf{30} \\
+    \textbf{Total}         &                                                         & \textbf{29} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Principiul cauzalității este implementat prin actualizarea stării istorice \emph{după}
-calcularea caracteristicilor cursei curente. Listarea~\ref{lst:leakage} ilustrează această
-ordine pentru caracteristica ``puncte acumulate în sezon'': valoarea atribuită cursei curente
-reflectă doar cursele anterioare.
+Fiecare categorie de caracteristici a fost concepută pentru a surprinde un factor diferit care
+influențează rezultatul unei curse:
+\begin{itemize}
+  \item \textbf{Grilă și calificări} --- poziția de start este, intuitiv, cel mai puternic predictor
+    al rezultatului, fiind cunoscută cu certitudine înainte de cursă; pe lângă valorile brute, se
+    adaugă indicatori binari pentru pole position și pentru plecarea din primele trei, respectiv
+    primele zece poziții.
+  \item \textbf{Forma rulantă a pilotului} --- medii pe ultimele cinci curse pentru poziția de
+    sosire, puncte, rata de podium, rata de abandon și poziția pe grilă, plus ultimul rezultat;
+    aceste mărimi captează ``momentul de formă'' recent al pilotului.
+  \item \textbf{Statistici sezon-to-date} --- puncte, poziție în clasament, podiumuri, victorii și
+    număr de curse acumulate în sezonul curent până înaintea cursei prezise, reflectând competiti\-vi\-tatea
+    de ansamblu din sezon.
+  \item \textbf{Forța echipei} --- forma și clasamentul echipei surprind faptul că performanța în
+    Formula 1 depinde decisiv de monopost, nu doar de pilot.
+  \item \textbf{Istoricul pe circuit} --- media de sosire și rata de podium ale pilotului și echipei
+    pe circuitul respectiv, din toți anii anteriori, modelând afinitatea cu un anumit traseu.
+  \item \textbf{Context} --- experiența (numărul de curse din carieră), runda din sezon, prezența
+    unei curse de sprint și condițiile meteo, factori care nuanțează predicția.
+\end{itemize}
+
+\subsection{Principiul cauzal și starea istorică}
+
+Principiul cauzalității, esențial pentru evitarea scurgerii de informație
+(Secțiunea~\ref{sec:leakage}), este implementat printr-o procedură în două faze, repetată pentru
+fiecare cursă parcursă în ordine cronologică. În prima fază se calculează toate caracteristicile
+cursei curente folosind \emph{exclusiv} starea istorică acumulată din cursele anterioare; abia în a
+doua fază, după ce caracteristicile au fost înregistrate, starea este actualizată cu rezultatul
+cursei curente. Astfel, este imposibil ca rezultatul unei curse să influențeze propriile sale
+caracteristici. Starea istorică este menținută în structuri de date eficiente: cozi cu lungime
+fixă (eng. \emph{deque}) pentru mediile rulante pe ultimele $N = 5$ curse, dicționare de sume
+pentru statisticile sezoniere (resetate la schimbarea sezonului) și liste pe perechea
+(pilot, circuit) pentru istoricul pe traseu. Listarea~\ref{lst:leakage} ilustrează această ordine
+pentru caracteristica ``puncte acumulate în sezon'': valoarea atribuită cursei curente reflectă
+doar cursele anterioare.
 
 \begin{lstlisting}[caption={Actualizarea stării istorice dupa calcularea caracteristicilor (principiul anti-leakage).}, label={lst:leakage}]
 # Pas 1: caracteristicile cursei R folosesc DOAR starea de pana acum.
@@ -726,12 +1417,146 @@ row["season_points"] = state_points[driver]      # puncte inainte de cursa R
 state_points[driver] += points_in_race_R
 \end{lstlisting}
 
-\section{Implementarea regresiei logistice}
+Tabelul~\ref{tab:trasare} ilustrează numeric acest mecanism pentru un pilot care obține constant 25
+de puncte pe cursă (câștigă fiecare cursă). Valorile caracteristicilor atribuite fiecărei runde
+reflectă \emph{exclusiv} cursele anterioare: înaintea primei runde, pilotul nu are istoric, deci
+primește valori implicite (poziție medie de sosire 15, zero puncte de sezon); înaintea celei de-a
+doua runde, caracteristicile încorporează rezultatul primei curse (medie de sosire 1, 25 de puncte),
+și așa mai departe. Crucial, punctele de sezon înaintea rundei a doua sunt 25, nu 50 --- dovada că
+rezultatul cursei curente nu se scurge în propriile sale caracteristici.
 
-Regresia logistică (Secțiunea~\ref{sec:logreg}) a fost implementată prin coborâre pe gradient
-în varianta \emph{batch}, cu regularizare $L_2$ și ponderare pe clase. Caracteristicile sunt
-standardizate intern (medie zero, abatere standard unitară), parametrii standardizării fiind
-învățați exclusiv pe datele de antrenament. Listarea~\ref{lst:logreg} prezintă bucla de
+\begin{table}[htbp]
+  \caption{Trasarea caracteristicilor cauzale pentru un pilot care câștigă fiecare cursă.}
+  \label{tab:trasare}
+  \begin{tabular}{c c c c}
+    \toprule
+    \textbf{Rundă} & \textbf{\texttt{form\_avg\_finish}} & \textbf{\texttt{season\_points}} & \textbf{\texttt{career\_races}} \\
+    \midrule
+    1 & 15 (implicit) & 0  & 0 \\
+    2 & 1             & 25 & 1 \\
+    3 & 1             & 50 & 2 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Valori implicite pentru piloți și echipe fără istoric}
+
+O dificultate practică apare la \emph{debutanți} și la prima apariție a unui pilot pe un circuit:
+în aceste cazuri starea istorică este goală, iar mediile rulante nu pot fi calculate. Soluția
+adoptată este atribuirea unor valori implicite rezonabile, care plasează un competitor necunoscut
+spre coada plutonului (de exemplu, o poziție medie de sosire de 15 și o rată de podium nulă). Această
+imputare deterministă este preferabilă eliminării exemplelor incomplete (care ar reduce setul de
+date și ar introduce un dezechilibru artificial) și menține caracterul cauzal, întrucât valorile
+implicite nu folosesc nicio informație din viitor. Tot în această fază se face și o curățare
+defensivă a valorilor anormale --- de pildă, o poziție pe grilă egală cu zero, semnalând o plecare
+din pit lane, este înlocuită cu valoarea implicită pentru grilă.
+
+\subsection{Inventarul complet al caracteristicilor}
+
+Pentru transparență și reproductibilitate, Tabelul~\ref{tab:features_full} enumeră toate cele 29 de
+caracteristici, împreună cu o descriere succintă și cu valoarea implicită folosită în absența
+istoricului. Caracteristicile marcate cu ``---'' în coloana de valori implicite sunt derivate
+direct din datele cursei curente (de exemplu, indicatorii binari calculați din poziția pe grilă)
+și nu necesită imputare.
+
+{\footnotesize
+\begin{table}[htbp]
+  \caption{Inventarul complet al celor 29 de caracteristici cauzale.}
+  \label{tab:features_full}
+  \begin{tabular}{l l c}
+    \toprule
+    \textbf{Caracteristică} & \textbf{Descriere} & \textbf{Implicit} \\
+    \midrule
+    \texttt{grid}                       & poziția pe grila de start                       & 20 \\
+    \texttt{quali\_pos}                 & poziția în calificări                           & 20 \\
+    \texttt{is\_pole}                   & 1 dacă pleacă din pole position                 & --- \\
+    \texttt{start\_top3}                & 1 dacă pleacă din primele 3 poziții             & --- \\
+    \texttt{start\_top10}               & 1 dacă pleacă din primele 10 poziții            & --- \\
+    \texttt{form\_avg\_finish}          & media pozițiilor de sosire (ultimele 5 curse)   & 15 \\
+    \texttt{form\_avg\_points}          & media punctelor (ultimele 5 curse)              & 0 \\
+    \texttt{form\_podium\_rate}         & rata de podium (ultimele 5 curse)               & 0 \\
+    \texttt{form\_dnf\_rate}            & rata de abandon (ultimele 5 curse)              & 0,1 \\
+    \texttt{form\_avg\_grid}            & media pozițiilor pe grilă (ultimele 5 curse)    & 15 \\
+    \texttt{last\_finish}               & poziția de sosire în ultima cursă               & 15 \\
+    \texttt{season\_points}             & punctele acumulate în sezon (până la cursă)     & 0 \\
+    \texttt{season\_position}           & poziția în clasamentul sezonului                & 20 \\
+    \texttt{season\_podiums}            & numărul de podiumuri în sezon                   & 0 \\
+    \texttt{season\_wins}               & numărul de victorii în sezon                    & 0 \\
+    \texttt{season\_races}              & numărul de curse disputate în sezon             & 0 \\
+    \texttt{team\_form\_avg\_finish}    & forma echipei: media de sosire                  & 12 \\
+    \texttt{team\_form\_avg\_points}    & forma echipei: media punctelor                  & 0 \\
+    \texttt{team\_season\_points}       & punctele echipei în sezon                       & 0 \\
+    \texttt{team\_season\_position}     & poziția echipei în clasament                    & 10 \\
+    \texttt{circuit\_driver\_avg\_finish} & media de sosire a pilotului pe circuit        & 15 \\
+    \texttt{circuit\_driver\_podium\_rate} & rata de podium a pilotului pe circuit        & 0 \\
+    \texttt{circuit\_team\_avg\_finish} & media de sosire a echipei pe circuit            & 12 \\
+    \texttt{career\_races}              & numărul total de curse din carieră              & 0 \\
+    \texttt{round}                      & runda din sezon                                 & --- \\
+    \texttt{is\_sprint\_weekend}        & 1 dacă weekendul include o cursă de sprint      & --- \\
+    \texttt{rain}                       & 1 dacă a plouat în cursă                         & 0 \\
+    \texttt{track\_temp}                & temperatura medie a pistei ($^{\circ}$C)        & 30 \\
+    \texttt{air\_temp}                  & temperatura medie a aerului ($^{\circ}$C)       & 22 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+}
+
+\subsection{Eticheta și matricea de caracteristici}
+
+În încheierea acestei etape se adaugă \emph{eticheta} de antrenare, \texttt{is\_podium}, definită ca
+1 dacă poziția finală este $\leq 3$ și 0 în caz contrar (Secțiunea~\ref{sec:clasificare}). Pe
+ansamblul celor 3458 de exemple, eticheta are media $0{,}150$, confirmând cantitativ dezechilibrul
+de clase discutat teoretic în Secțiunea~\ref{sec:dezechilibru}: doar circa 15\% dintre perechile
+cursă--pilot corespund unui podium. Setul de caracteristici, împreună cu eticheta, este materializat
+într-o matrice numerică $\mathbf{X} \in \mathbb{R}^{n \times 29}$ și un vector $\mathbf{y}$,
+formatul standard consumat de toate cele trei modele.
+
+\section{Implementarea modelelor}
+\label{sec:implmodele}
+
+Cele trei modele sunt implementate de la zero, peste NumPy, respectând o interfață comună care le
+face interschimbabile în restul sistemului. Această uniformitate este esențială pentru studiul
+comparativ: procedura de validare, predicția și evaluarea funcționează identic, indiferent de
+model, ceea ce garantează că diferențele de performanță observate provin din algoritmi, nu din
+condiții experimentale diferite.
+
+\subsection{Contractul comun și standardizarea}
+
+Toate modelele moștenesc dintr-o clasă de bază care fixează un contract minimal: metoda
+\texttt{fit(X, y)} antrenează modelul, \texttt{predict\_proba(X)} întoarce probabilitatea de podium
+pentru fiecare exemplu, iar \texttt{predict(X)} aplică pragul de $0{,}5$ pentru a obține eticheta
+binară. Cheia întregii soluții este \texttt{predict\_proba}: probabilitatea de podium servește
+drept scor de ordonare a piloților (Secțiunea~\ref{sec:predictie}), nu doar drept etichetă. Pe
+lângă contract, clasa de bază expune și importanța caracteristicilor, atunci când modelul o oferă.
+
+Tot aici este implementată \emph{standardizarea} (z-score) folosită de regresia logistică:
+media și abaterea standard se învață \emph{doar} pe datele de antrenament (metoda \texttt{fit}) și
+se reaplică identic la validare și test (metoda \texttt{transform}), ca în Listarea~\ref{lst:scaler}.
+Această disciplină --- a învăța parametrii de preprocesare exclusiv pe antrenament --- previne
+scurgerea prin preprocesare (Secțiunea~\ref{sec:leakage}) și este respectată riguros în
+implementare. Coloanele constante (abatere standard nulă) sunt tratate special, pentru a evita
+împărțirea la zero.
+
+\begin{lstlisting}[caption={Standardizarea z-score, cu parametri invatati doar pe antrenament.}, label={lst:scaler}]
+def fit(self, X):
+    self.mean_ = X.mean(axis=0)
+    std = X.std(axis=0)
+    std[std == 0] = 1.0          # evita impartirea la zero pe coloane constante
+    self.std_ = std
+    return self
+
+def transform(self, X):
+    return (X - self.mean_) / self.std_     # reaplica parametrii invatati pe train
+\end{lstlisting}
+
+\subsection{Regresia logistică}
+
+Regresia logistică (Secțiunea~\ref{sec:logreg}) a fost implementată prin coborâre pe gradient în
+varianta \emph{batch}, cu regularizare $L_2$ și ponderare pe clase. Caracteristicile sunt
+standardizate intern, parametrii standardizării fiind învățați exclusiv pe datele de antrenament.
+Un detaliu de implementare important este folosirea unei variante \emph{numeric stabile} a funcției
+sigmoid, care tratează separat argumentele pozitive și negative pentru a evita depășirea de
+domeniu (eng. \emph{overflow}) la exponențiere. Listarea~\ref{lst:logreg} prezintă bucla de
 antrenare, care implementează ecuațiile~\eqref{eq:bce} și~\eqref{eq:gradient} și înregistrează
 istoricul funcției de cost pentru analiza convergenței.
 
@@ -750,14 +1575,33 @@ for _ in range(self.n_iters):
     self.b -= self.lr * grad_b
 \end{lstlisting}
 
-\section{Implementarea arborelui de decizie}
+În cod, vectorul \texttt{sample\_w} conține ponderile pe exemple care contracarează dezechilibrul
+de clase: fiecare exemplu primește o pondere invers proporțională cu frecvența clasei sale, astfel
+încât cele circa 15\% de exemple de podium să cântărească la fel de mult, în total, ca restul de
+85\%. Întreaga buclă este \emph{vectorizată}: produsele matrice--vector $\mathbf{X}\mathbf{w}$ și
+$\mathbf{X}^\top \mathbf{e}$ procesează toate exemplele simultan, fără cicluri Python explicite,
+ceea ce face antrenarea rapidă chiar și pentru mii de iterații. Memorarea istoricului funcției de
+cost permite verificarea ulterioară a convergenței --- curba de cost trebuie să scadă monoton și
+să se aplatizeze, semn că pasul de învățare a fost ales adecvat.
+
+\subsection{Arborele de decizie}
 
 Arborele de decizie (Secțiunea~\ref{sec:tree}) folosește criteriul entropie plus câștig de
-informație. Pentru eficiență, căutarea celui mai bun prag pe o caracteristică este vectorizată:
-valorile sunt sortate, iar prin sume cumulative ale etichetelor se obține instantaneu numărul
-de pozitive din partea stângă pentru fiecare prag posibil, deci entropiile copiilor pentru toate
-pragurile candidate simultan. Listarea~\ref{lst:tree} prezintă nucleul acestui calcul,
-corespunzând ecuațiilor~\eqref{eq:entropie} și~\eqref{eq:gain}.
+informație. Structura arborelui este reprezentată prin noduri ușoare, fiecare reținând fie testul
+(caracteristica și pragul) și cei doi copii, fie, în cazul frunzelor, probabilitatea de podium ---
+fracția de exemple pozitive ajunse în acea frunză. Construirea este recursivă, iar oprirea unui
+nod se produce la atingerea adâncimii maxime, a unui număr insuficient de exemple sau a unui nod
+deja pur.
+
+Provocarea de eficiență a arborelui este căutarea celei mai bune divizări, care, naiv implementată,
+ar testa fiecare prag posibil pentru fiecare caracteristică --- un cost prohibitiv. Soluția adoptată
+\emph{vectorizează} această căutare: pentru o caracteristică, valorile sunt sortate o singură dată,
+iar prin sume cumulative ale etichetelor se obține instantaneu numărul de exemple pozitive din
+partea stângă pentru \emph{fiecare} prag posibil, deci entropiile ambilor copii pentru toate
+pragurile candidate simultan. Se evaluează doar pragurile valide --- acolo unde valoarea
+caracteristicii se schimbă efectiv și unde ambii copii respectă numărul minim de exemple pe frunză.
+Listarea~\ref{lst:tree} prezintă nucleul acestui calcul, corespunzând ecuațiilor~\eqref{eq:entropie}
+și~\eqref{eq:gain}.
 
 \begin{lstlisting}[caption={Calculul vectorizat al castigului de informatie pentru toate pragurile unei caracteristici.}, label={lst:tree}]
 cum_pos     = np.cumsum(y_sorted)          # pozitive cumulate in stanga
@@ -772,11 +1616,57 @@ child_entropy = (left_total/n)*h_left + (right_total/n)*h_right
 gain = parent_entropy - child_entropy      # castigul de informatie
 \end{lstlisting}
 
-\section{Implementarea pădurii aleatoare}
+Un exemplu numeric clarifică acest calcul. Fie un nod cu șase exemple, dintre care trei pozitive și
+trei negative, perfect separabile printr-o caracteristică (de pildă, valorile $0;\,0{,}1;\,0{,}2$
+sunt negative, iar $1{,}0;\,1{,}1;\,1{,}2$ sunt pozitive). Entropia părintelui este
+$H(3/6) = 1$ bit (impuritate maximă). Un prag plasat între $0{,}2$ și $1{,}0$ produce un copil
+stâng cu trei exemple negative ($H = 0$) și un copil drept cu trei exemple pozitive ($H = 0$),
+deci o entropie a copiilor nulă. Câștigul de informație este, conform ecuației~\eqref{eq:gain},
+$IG = 1 - 0 = 1$ bit --- valoarea maximă posibilă, semnalând o divizare perfectă. Acest scenariu
+este folosit și ca test unitar al criteriului (Secțiunea~\ref{sec:testare}).
 
-Pădurea aleatoare (Secțiunea~\ref{sec:forest}) este construită peste arborele de decizie propriu.
-Fiecare arbore primește un eșantion bootstrap al rândurilor și un generator de numere aleatoare
-propriu, ceea ce asigură reproductibilitatea și, în același timp, decorelarea arborilor.
+Construirea propriu-zisă a arborelui este recursivă (Listarea~\ref{lst:build}): un nod devine
+frunză dacă s-a atins adâncimea maximă, dacă are prea puține exemple sau dacă este deja pur (toate
+exemplele din aceeași clasă); altfel, se caută cea mai bună divizare, iar exemplele sunt împărțite
+în doi copii pe baza pragului ales. La predicție, fiecare exemplu este rutat recursiv prin arbore,
+de la rădăcină spre frunza corespunzătoare, partiționarea fiind realizată tot vectorizat, pe măști
+booleene, pentru eficiență.
+
+\begin{lstlisting}[caption={Conditiile de oprire si recursivitatea construirii arborelui.}, label={lst:build}]
+node.value = pos / n              # P(podium) in nod = fractia de pozitive
+if (depth >= self.max_depth or n < self.min_samples_split
+        or pos == 0 or pos == n):      # nod pur sau prea mic -> frunza
+    node.is_leaf = True
+    return node
+
+feat, thr, gain = self._best_split(X, y)   # cea mai buna divizare (vectorizat)
+if feat is None or gain <= 0:
+    node.is_leaf = True
+    return node
+
+mask = X[:, feat] <= thr
+node.left  = self._build(X[mask],  y[mask],  depth + 1)   # recursiv stanga
+node.right = self._build(X[~mask], y[~mask], depth + 1)   # recursiv dreapta
+\end{lstlisting}
+
+Arborele suportă, în plus, un parametru \texttt{max\_features} care limitează numărul de
+caracteristici candidate la fiecare divizare la un subset aleator --- mecanism nefolosit de arborele
+individual, dar esențial pentru pădurea aleatoare. Pe parcursul construirii, fiecare divizare
+acumulează o contribuție la \emph{importanța caracteristicilor}, egală cu câștigul de informație
+ponderat cu numărul de exemple din nod; la final, aceste contribuții sunt normalizate, oferind o
+măsură de tip reducere medie de impuritate (Secțiunea~\ref{sec:forest}).
+
+\subsection{Pădurea aleatoare}
+
+Pădurea aleatoare (Secțiunea~\ref{sec:forest}) este construită peste arborele de decizie propriu,
+ceea ce ilustrează un principiu de proiectare prin compoziție: ansamblul reutilizează integral
+implementarea arborelui, adăugând doar logica de eșantionare și agregare. Fiecare arbore primește un
+eșantion bootstrap al rândurilor (extragere cu revenire) și un generator de numere aleatoare
+propriu, derivat dintr-un generator-părinte. Această schemă de generatoare imbricate asigură o
+proprietate aparent contradictorie, dar necesară: arborii sunt \emph{diferiți} între ei (fiecare cu
+propria sursă de aleator, deci decorelați), dar întregul proces este \emph{reproductibil} (pornind
+de la aceeași sămânță, se obține aceeași pădure). Predicția ansamblului este media probabilităților
+arborilor, iar opțional se poate calcula scorul out-of-bag (Secțiunea~\ref{sec:forest}).
 Listarea~\ref{lst:forest} prezintă bucla de antrenare a ansamblului.
 
 \begin{lstlisting}[caption={Antrenarea pe baza de bagging a padurii aleatoare.}, label={lst:forest}]
@@ -792,42 +1682,370 @@ for _ in range(self.n_estimators):
     self.trees.append(tree)
 \end{lstlisting}
 
-\section{Predicția podiumului și agregarea în campionat}
+Opțional, în timpul antrenării se poate calcula scorul out-of-bag (Secțiunea~\ref{sec:forest}):
+pentru fiecare arbore se identifică exemplele neselectate de eșantionul bootstrap, iar predicțiile
+acestora se acumulează doar din arborii care nu le-au ``văzut'' (Listarea~\ref{lst:oob}). Media
+acestor predicții oferă o estimare a erorii de generalizare fără un set de validare separat, ceea ce
+constituie un avantaj practic notabil al pădurii aleatoare. Importanța caracteristicilor pentru
+pădure se obține mediind importanțele arborilor componenți.
 
-Deoarece un clasificator binar aplicat independent fiecărui pilot nu garantează exact trei
-predicții pozitive pe cursă, podiumul este determinat prin \emph{ordonare}: pentru fiecare cursă
-se calculează probabilitatea de podium a tuturor piloților, aceștia sunt sortați descrescător,
-iar primii trei formează podiumul prezis (probabilitatea cea mai mare corespunde locului P1).
-Egalitățile de probabilitate se departajează după poziția pe grilă. Pentru clasamentul de
-campionat, probabilitățile sunt convertite în puncte estimate pe cursă, apoi însumate pe sezon.
-
-\section{Validarea temporală pe ani}
-
-Procedura de validare implementează schema descrisă în Secțiunea~\ref{sec:validare}.
-Listarea~\ref{lst:rolling} prezintă bucla principală: pentru fiecare sezon de test, modelul este
-reantrenat de la zero pe sezoanele anterioare și evaluat pe sezonul curent.
-
-\begin{lstlisting}[caption={Bucla de validare temporala pe ani (rolling cross-year).}, label={lst:rolling}]
-for test_season in seasons[1:]:            # primul sezon nu are trecut
-    train = feats[feats["season"] <  test_season]
-    test  = feats[feats["season"] == test_season]
-    Xtr, ytr, _ = feature_matrix(train)
-    Xte, yte, _ = feature_matrix(test)
-
-    model = build_model(model_key, **overrides)
-    model.fit(Xtr, ytr)                    # antrenare doar pe trecut
-    proba = model.predict_proba(Xte)       # predictie pe sezonul de test
+\begin{lstlisting}[caption={Acumularea predictiilor out-of-bag (OOB) pe mostrele neselectate.}, label={lst:oob}]
+oob_mask = np.ones(n, dtype=bool)
+oob_mask[idx] = False                       # exemplele NEselectate de acest arbore
+if oob_mask.any():
+    oob_sum[oob_mask]   += tree.predict_proba(X[oob_mask])
+    oob_count[oob_mask] += 1                 # de cati arbori a fost "vazut" fiecare
+# La final: predictia OOB = oob_sum / oob_count, comparata cu y pentru scorul OOB.
 \end{lstlisting}
 
-\section{Metrici și instrumentația experimentală}
+\subsection{Complexitatea computațională}
+\label{sec:complexitate}
 
-Toate metricile din Secțiunea~\ref{sec:metrici} sunt implementate manual, inclusiv curbele ROC,
-Precision-Recall și de calibrare, precum și aria sub curbe (prin regula trapezelor). Pe lângă
-evaluarea de bază, sistemul include un modul de experimente care realizează: variația
-hiperparametrilor pe câte o dimensiune (curbe de validare), căutarea pe grilă 2D, măsurarea
-timpului de antrenare, analiza convergenței și a erorii out-of-bag, curba de învățare (în funcție
-de volumul de date) și sensibilitatea la pragul de decizie. Întreaga funcționalitate este
-expusă printr-o interfață în linie de comandă.
+Cele trei modele diferă semnificativ ca cost de antrenare. Regresia logistică are o complexitate de
+$O(T \cdot n \cdot d)$, unde $T$ este numărul de iterații, $n$ numărul de exemple și $d$ numărul de
+caracteristici, fiecare iterație fiind o trecere vectorizată peste toate datele. Arborele de decizie
+costă aproximativ $O(d \cdot n \log n)$ per nivel, dominat de sortarea valorilor la căutarea
+divizărilor; vectorizarea prin sume cumulative reduce constanta acestui cost. Pădurea aleatoare
+multiplică costul arborelui cu numărul de arbori, dar fiecare arbore lucrează pe un subset de
+$\sqrt{d}$ caracteristici per divizare, ceea ce atenuează creșterea. În practică, pe setul de date
+folosit, toate cele trei modele se antrenează în ordinul secundelor, iar timpul mediu de antrenare
+per fold este înregistrat de procedura de validare pentru comparație
+(Secțiunea~\ref{sec:validimpl}).
+
+\subsection{Fabrica de modele și hiperparametrii}
+
+Pentru a uniformiza construirea modelelor, o funcție-fabrică creează modelul potrivit pornind de la
+o cheie scurtă (\texttt{logreg}, \texttt{tree} sau \texttt{forest}) și de la hiperparametrii din
+fișierul de configurare. Acest mecanism centralizează valorile hiperparametrilor și permite, în
+același timp, suprascrierea lor punctuală în experimente. Hiperparametrii sunt ficși pe tot
+parcursul studiului comparativ (Tabelul~\ref{tab:hiperparametri}), pentru ca diferențele de
+performanță să reflecte algoritmii, nu o reglare fină inegală. Valorile au fost alese pe baza
+recomandărilor uzuale din literatură (Capitolul~\ref{cap:teorie}): un pas de învățare moderat și un
+număr mare de iterații pentru convergența regresiei logistice; o adâncime limitată pentru arbore,
+care îi controlează varianța; și o pădure cu suficient de mulți arbori și $\sqrt{d}$ caracteristici
+per divizare, conform practicii consacrate pentru clasificare.
+
+\begin{table}[htbp]
+  \caption{Hiperparametrii ficși ai celor trei modele.}
+  \label{tab:hiperparametri}
+  \begin{tabular}{l l l}
+    \toprule
+    \textbf{Model} & \textbf{Hiperparametru} & \textbf{Valoare} \\
+    \midrule
+    Regresie logistică & pas de învățare $\eta$           & $0{,}1$ \\
+                       & număr de iterații                & $3000$ \\
+                       & regularizare $L_2$ ($\lambda$)   & $0{,}01$ \\
+                       & ponderare pe clase               & activată \\
+    \midrule
+    Arbore de decizie  & adâncime maximă                  & $8$ \\
+                       & minim exemple pentru divizare    & $10$ \\
+                       & minim exemple pe frunză          & $5$ \\
+    \midrule
+    Random Forest      & număr de arbori                  & $60$ \\
+                       & adâncime maximă                  & $12$ \\
+                       & caracteristici per divizare      & $\sqrt{d}$ \\
+                       & minim exemple pe frunză          & $4$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Predicția podiumului și agregarea în campionat}
+\label{sec:predictie}
+
+\subsection{Ordonarea piloților per cursă}
+
+Un clasificator binar aplicat independent fiecărui pilot nu garantează exact trei predicții
+pozitive pe cursă: în funcție de prag, pot rezulta doi sau cinci piloți ``de podium'', ceea ce nu
+corespunde realității în care podiumul are exact trei locuri. De aceea, podiumul este determinat
+prin \emph{ordonare} (Secțiunea~\ref{sec:clasificare}): pentru fiecare cursă se calculează
+probabilitatea de podium a tuturor piloților, aceștia sunt sortați descrescător, iar primii trei
+formează podiumul prezis (probabilitatea cea mai mare corespunde locului P1). Egalitățile de
+probabilitate se departajează după poziția pe grilă --- un criteriu obiectiv, cunoscut înainte de
+cursă, care favorizează pilotul plecat mai în față. Listarea~\ref{lst:rank} prezintă această
+ordonare.
+
+\begin{lstlisting}[caption={Ordonarea pilotilor unei curse dupa probabilitatea de podium.}, label={lst:rank}]
+# Sortare descrescatoare dupa probabilitate; egalitatile -> dupa grid (asc).
+out = race_df[cols].copy()
+out["proba"] = np.asarray(proba, dtype=float)
+out = out.sort_values(["proba", "grid"], ascending=[False, True]).reset_index(drop=True)
+out["pred_position"] = np.arange(1, len(out) + 1)   # 1 = P1, 2 = P2, ...
+\end{lstlisting}
+
+Pentru a ilustra concret mecanismul, Tabelul~\ref{tab:exemplu_ordonare} prezintă primii șase
+piloți ordonați de pădurea aleatoare pentru o cursă reală (Marele Premiu al Australiei 2025,
+prima rundă a sezonului), alături de probabilitatea de podium și de poziția finală reală. Podiumul
+prezis (primii trei după probabilitate) este NOR, PIA și VER; podiumul real a fost NOR, VER și RUS.
+Exemplul evidențiază atât puterea, cât și limitele metodei: două dintre cele trei poziții sunt
+nimerite (NOR și VER), însă PIA, deși clasat al doilea ca probabilitate, a terminat abia pe locul
+nouă, în timp ce RUS, cu o probabilitate mai mică, a urcat pe podium --- o ilustrare a
+incertitudinii inerente predicției sportive.
+
+\begin{table}[htbp]
+  \caption{Exemplu de ordonare a piloților după probabilitatea de podium (Australia 2025, runda 1).}
+  \label{tab:exemplu_ordonare}
+  \begin{tabular}{c l c c c}
+    \toprule
+    \textbf{Loc prezis} & \textbf{Pilot} & \textbf{Grilă} & \textbf{$\hat{p}$ (podium)} & \textbf{Poziție reală} \\
+    \midrule
+    1 & NOR & 1 & 0,652 & 1 \\
+    2 & PIA & 2 & 0,565 & 9 \\
+    3 & VER & 3 & 0,522 & 2 \\
+    4 & RUS & 4 & 0,432 & 3 \\
+    5 & LEC & 7 & 0,337 & 8 \\
+    6 & HAM & 8 & 0,316 & 10 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Agregarea în clasament de campionat}
+
+Aceeași ordonare per cursă stă la baza unui clasament de campionat estimat la finalul sezonului.
+Pentru fiecare cursă, clasamentul prezis complet (nu doar primii trei) primește punctele standard
+din Formula 1 (25 pentru locul întâi, 18 pentru al doilea, 15 pentru al treilea și așa mai departe,
+până la un punct pentru locul al zecelea), iar punctele se însumează pe tot sezonul.
+Listarea~\ref{lst:standings} schițează acest calcul. Clasamentul real se obține analog, însumând
+punctele efective, iar comparația dintre cele două clasamente oferă o evaluare la nivel de sezon,
+complementară celei per cursă.
+
+\begin{lstlisting}[caption={Agregarea probabilitatilor intr-un clasament de campionat prezis.}, label={lst:standings}]
+# Pentru fiecare cursa: puncte F1 dupa clasamentul prezis, insumate pe sezon.
+for _, race in df.groupby("round", sort=True):
+    ranked = rank_drivers(race, race["_proba"].to_numpy())
+    for _, row in ranked.iterrows():
+        pos = int(row["pred_position"])
+        points[driver] += F1_POINTS.get(pos, 0)     # doar top 10 puncteaza
+\end{lstlisting}
+
+\section{Validarea temporală pe ani}
+\label{sec:validimpl}
+
+Procedura de validare implementează schema descrisă teoretic în Secțiunea~\ref{sec:validare} și
+reprezintă mecanismul prin care lucrarea garantează o estimare onestă a performanței. Ideea
+fundamentală este că modelul nu trebuie evaluat niciodată pe date pe care le-a ``văzut'' în vreo
+formă la antrenare. Listarea~\ref{lst:rolling} prezintă bucla principală: pentru fiecare sezon de
+test $S$, modelul este reantrenat \emph{de la zero} pe sezoanele până la $S-2$, sezonul $S-1$ este
+ținut deoparte ca validare, iar performanța finală se măsoară pe sezonul de test $S$, complet
+nevăzut. Reantrenarea de la zero la fiecare pas, în loc de o actualizare incrementală, este o
+alegere deliberată: ea garantează că modelul evaluat pe sezonul $S$ nu păstrează nicio urmă din
+sezoanele ulterioare.
+
+\begin{lstlisting}[caption={Bucla de validare temporala cu separare train / validare / test pe ani.}, label={lst:rolling}]
+for i in range(2, len(seasons)):           # avem nevoie de S-1 si de un sezon inainte de el
+    test_season = seasons[i]               # S
+    val_season  = seasons[i - 1]           # S-1 (validare)
+    train = feats[feats["season"].isin(seasons[:i - 1])]   # <= S-2
+    val   = feats[feats["season"] == val_season]
+    test  = feats[feats["season"] == test_season]
+
+    model = build_model(model_key, **overrides)
+    model.fit(*feature_matrix(train)[:2])  # antrenare doar pe <= S-2
+    proba_val  = model.predict_proba(feature_matrix(val)[0])    # validare pe S-1
+    proba_test = model.predict_proba(feature_matrix(test)[0])   # test pe S
+\end{lstlisting}
+
+Bucla pornește de la al treilea sezon disponibil, deoarece schema necesită cel puțin un sezon de
+antrenament ($\leq S-2$) și un sezon de validare ($S-1$). Cu cele opt sezoane disponibile
+(2018--2025), rezultă șase sezoane de test (2020--2025), fiecare cu propriul model antrenat doar pe
+trecut. Pentru fiecare sezon de test se calculează și se rețin cele patru metrici, atât pe sezonul
+de test, cât și pe cel de validare; raportarea separată a validării, deși nu este folosită la
+reglarea hiperparametrilor (care sunt ficși), servește transparenței metodologice, arătând că
+performanța pe sezonul ținut deoparte este coerentă cu cea de test. Rezultatele individuale sunt
+agregate într-o structură care expune atât tabelul per sezon, cât și mediile globale și acuratețea
+ori scorul $F_1$ pe toate exemplele de test reunite, plus timpul mediu de antrenare per fold ---
+util pentru compararea costului computațional al celor trei modele.
+
+\section{Antrenarea incrementală in-sezon}
+\label{sec:insezon}
+
+Pe lângă validarea pe ani, soluția include o analiză a efectului datelor \emph{in-sezon}: în
+practică, atunci când prezicem o cursă din mijlocul unui sezon, dispunem deja de rezultatele
+curselor anterioare din același sezon. Pentru a cuantifica acest avantaj, pentru fiecare rundă $R$
+a unui sezon se compară două regimuri de antrenare, ambele prezicând aceeași cursă $R$:
+\begin{itemize}
+  \item \textbf{fără in-sezon} --- model antrenat doar pe sezoanele anterioare;
+  \item \textbf{cu in-sezon} --- model antrenat pe sezoanele anterioare plus cursele $1, \dots, R-1$
+    din sezonul curent.
+\end{itemize}
+La prima rundă cele două regimuri coincid (nu există curse in-sezon anterioare), iar diferența
+crește pe măsură ce se acumulează date in-sezon. Justificarea acestei analize este practică:
+antrenarea ``cu in-sezon'' corespunde modului real de utilizare a unui predictor pe parcursul
+sezonului, în care fiecare cursă nou disputată devine date de antrenament pentru următoarea.
+Compararea cu regimul ``fără'' cuantifică, astfel, câștigul adus de actualizarea modelului cu
+informația cea mai recentă.
+
+Din punct de vedere al implementării, ambele regimuri respectă strict cauzalitatea: modelul ``cu
+in-sezon'' pentru runda $R$ este antrenat exclusiv pe sezoanele anterioare plus rundele
+$1, \dots, R-1$, niciodată pe runda $R$ însăși. Modelul de bază (``fără'') se antrenează o singură
+dată pe sezoanele anterioare și se reutilizează la toate rundele, în timp ce modelul augmentat se
+reantrenează la fiecare rundă pentru a încorpora cursele in-sezon acumulate. Deoarece metricile
+calculate pe o singură cursă sunt grosiere (o cursă are un singur podium, deci valorile sunt
+fracții cu numitor mic), rezultatele se raportează ca medie cumulativă pe runde, care netezește
+fluctuațiile (Secțiunea~\ref{sec:rezinsezon}).
+
+\section{Metrici și instrumentația experimentală}
+\label{sec:instrumentatie}
+
+Toate metricile din Secțiunea~\ref{sec:metrici} sunt implementate manual, peste NumPy, fără
+biblioteci de învățare automată, în acord cu cerința de implementare de la zero. Metricile de
+clasificare (acuratețe, precizie, recall, $F_1$) se derivă direct din matricea de confuzie, în timp
+ce metricile specifice problemei se calculează la nivel de cursă: pentru fiecare cursă se compară
+podiumul prezis (primii trei după probabilitate) cu cel real (primii trei după poziția finală), iar
+rezultatele se mediază pe sezon. Listarea~\ref{lst:podium} prezintă nucleul acestui calcul.
+
+\begin{lstlisting}[caption={Calculul metricilor de podium per cursa, apoi mediate pe sezon.}, label={lst:podium}]
+for _, race in df.groupby("round", sort=True):
+    actual = list(race.sort_values("position")["driver"].head(3))    # podium real
+    ranked = rank_drivers(race, race["_proba"].to_numpy())
+    pred   = list(ranked["driver"].head(3))                          # podium prezis
+
+    inter = len(set(pred) & set(actual))
+    hit.append(inter / 3)                          # rata de nimerire (0, 1/3, 2/3, 1)
+    exact_set.append(1.0 if set(pred) == set(actual) else 0.0)        # podium exact
+    winner.append(1.0 if pred[0] == actual[0] else 0.0)              # castigator Top-1
+\end{lstlisting}
+
+Pentru fiecare sezon de test, sistemul salvează rezultatele atât tabelar (fișiere CSV cu metricile
+per sezon și un sumar comparativ), cât și sub formă de grafice generate cu matplotlib: câte un
+grafic pe metrică, defalcat pe sezoanele de test, un grafic-sumar comparativ între modele și
+graficele de importanță a caracteristicilor. Această dublă raportare --- numerică și vizuală ---
+facilitează atât verificarea exactă, cât și interpretarea de ansamblu din Capitolul~\ref{cap:rezultate}.
+
+\section{Interfața în linie de comandă}
+\label{sec:cli}
+
+Toate funcționalitățile sunt expuse printr-o interfață unică în linie de comandă, organizată pe
+subcomenzi (Tabelul~\ref{tab:cli}). Această alegere face soluția ușor de rulat și de reprodus: un
+flux complet de lucru constă din construirea datasetului, urmată de evaluarea comparativă sau de
+predicția unei curse ori a unui sezon. Subcomenzile partajează aceeași logică de antrenare strict
+cauzală --- de exemplu, predicția unei curse din mijlocul sezonului antrenează automat modelul doar
+pe trecutul acelei curse, ilustrând în practică principiul anti-leakage.
+
+\begin{table}[htbp]
+  \caption{Subcomenzile interfeței în linie de comandă.}
+  \label{tab:cli}
+  \begin{tabular}{l l}
+    \toprule
+    \textbf{Subcomandă} & \textbf{Funcție} \\
+    \midrule
+    \texttt{build-data}     & construiește tabelul de rezultate și caracteristicile din cache \\
+    \texttt{train}          & antrenează și salvează un model până la un sezon-prag \\
+    \texttt{evaluate}       & validare temporală pe ani + tabele și grafice comparative \\
+    \texttt{predict-race}   & podiumul prezis al unei curse \\
+    \texttt{predict-season} & podium per cursă + clasament de campionat prezis \\
+    \texttt{insezon}        & compară performanța cu și fără cursele in-sezon \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Fluxul de lucru complet}
+
+Un experiment complet se desfășoară într-o succesiune naturală de comenzi. Mai întâi, datasetul
+este construit o singură dată din cache, materializând tabelul de rezultate și caracteristicile.
+Apoi, studiul comparativ al celor trei modele se obține printr-o singură comandă de evaluare, care
+produce tabelele și graficele din Capitolul~\ref{cap:rezultate}. În fine, soluția poate fi folosită
+demonstrativ pentru a prezice o cursă anume sau un întreg sezon. Listarea~\ref{lst:flux} prezintă
+această secvență.
+
+\begin{lstlisting}[caption={Fluxul de lucru complet, exprimat prin comenzile interfetei.}, label={lst:flux}]
+python main.py build-data                              # 1. construieste datasetul
+python main.py evaluate --model all                    # 2. studiu comparativ + grafice
+python main.py predict-race --season 2025 --round 1 --model forest   # 3. o cursa
+python main.py predict-season --season 2025 --model forest           # 4. un sezon
+python main.py insezon --season 2025 --model all       # 5. analiza in-sezon
+\end{lstlisting}
+
+Fiecare comandă de predicție reantrenează automat modelul doar pe trecutul corespunzător, astfel
+încât principiul anti-leakage este respectat în mod transparent pentru utilizator, fără pași
+manuali suplimentari.
+
+\section{Testarea automată și verificarea corectitudinii}
+\label{sec:testare}
+
+Deoarece algoritmii sunt implementați de la zero, corectitudinea lor nu poate fi presupusă, ci
+trebuie verificată explicit. De aceea, soluția include o suită de teste automate, organizată pe
+patru module, care acoperă punctele critice ale implementării. Rolul lor este dublu: validează
+corectitudinea funcțională și, mai ales pentru testele anti-leakage, protejează cea mai importantă
+proprietate metodologică a lucrării.
+
+Primul modul testează \emph{absența scurgerii de informație}. Pe un mini-sezon sintetic, cu
+rezultate cunoscute, se verifică faptul că, la prima cursă, toate caracteristicile au valori
+implicite (nu există istoric), iar punctele de sezon înaintea unei curse reflectă exact suma
+curselor \emph{anterioare}, niciodată cursa curentă. Listarea~\ref{lst:test} prezintă acest test:
+un pilot care obține 25 de puncte pe cursă trebuie să aibă, înaintea celei de-a doua curse, 25 de
+puncte (nu 50) și, înaintea celei de-a treia, 50. Acest test transformă principiul cauzal dintr-o
+intenție într-o garanție verificabilă mecanic.
+
+\begin{lstlisting}[caption={Test anti-leakage: punctele de sezon exclud cursa curenta.}, label={lst:test}]
+def test_season_points_exclude_current_race():
+    feats = add_features(_mini_long())          # AAA ia 25p/cursa
+    aaa = feats[feats["driver"] == "AAA"].sort_values("round")
+    # Inainte de R2 are 25 (din R1), nu 50; inainte de R3 are 50.
+    assert list(aaa["season_points"]) == [0.0, 25.0, 50.0]
+\end{lstlisting}
+
+Al doilea modul testează cei \emph{trei algoritmi}, pe seturi-jucărie cu răspuns cunoscut: regresia
+logistică trebuie să separe aproape perfect date liniar separabile și să atribuie cel mai mare
+coeficient caracteristicii celei mai informative; arborele trebuie să învețe o regulă conjunctivă
+(de forma $x_0 > 0$ și $x_1 > 0$) și să acorde importanță aproape nulă unei caracteristici de
+zgomot; pădurea trebuie să generalizeze cel puțin la fel de bine ca un arbore pe date zgomotoase și
+să producă un scor out-of-bag rezonabil. Al treilea modul verifică \emph{metricile}, comparând
+valorile calculate cu rezultate derivate manual dintr-o matrice de confuzie cunoscută. Al patrulea
+modul testează \emph{blocurile reutilizate} de analiza in-sezon, confirmând că regimul ``cu
+in-sezon'' folosește efectiv mai multe date decât cel de bază și că, la prima rundă, cele două
+regimuri coincid.
+
+Această suită de teste oferă încredere că diferențele de performanță raportate în
+Capitolul~\ref{cap:rezultate} reflectă proprietățile reale ale algoritmilor, nu erori de
+implementare, și că rezultatele nu sunt afectate de scurgerea de informație.
+
+\section{Reproductibilitate}
+\label{sec:reproductibilitate}
+
+Reproductibilitatea a fost o cerință de proiectare urmărită pe tot parcursul soluției și se sprijină
+pe trei mecanisme. În primul rând, sursele de aleator sunt controlate printr-o sămânță fixă: pădurea
+aleatoare pornește de la un generator inițializat determinist, astfel încât două rulări produc
+exact aceeași pădure. În al doilea rând, accesul la date este strict offline, din cache
+(Secțiunea~\ref{sec:date}), ceea ce decuplează rezultatele de starea curentă a serviciilor externe.
+În al treilea rând, rezultatele intermediare costisitoare --- tabelul de rezultate și matricea de
+caracteristici --- sunt memorate pe disc în format Parquet și reutilizate, garantând că toate
+experimentele pornesc de la exact același set de date. Împreună, aceste mecanisme asigură că
+rezultatele raportate în Capitolul~\ref{cap:rezultate} pot fi regenerate identic.
+
+\section{Decizii de proiectare și compromisuri}
+\label{sec:decizii}
+
+Pe parcursul dezvoltării au fost luate mai multe decizii de proiectare, fiecare implicând un
+compromis pe care îl rezumăm aici, pentru a justifica forma finală a soluției.
+
+\textbf{Clasificare și ordonare, în loc de regresie pe poziție.} Problema ar fi putut fi formulată
+ca o regresie directă a poziției finale. S-a preferat clasificarea binară a podiumului, urmată de
+ordonare (Secțiunea~\ref{sec:predictie}), deoarece produce o probabilitate ușor de interpretat și
+de agregat, iar obiectivul real --- identificarea celor trei piloți de pe podium --- este surprins
+mai natural de o problemă de ordonare decât de predicția exactă a fiecărei poziții.
+
+\textbf{Validare la granularitate de sezon, nu de cursă.} O separare la nivel de cursă ar fi oferit
+mai multe puncte de evaluare, dar ar fi amestecat curse din același sezon între antrenament și test,
+slăbind separarea temporală. Granularitatea pe sezon (Secțiunea~\ref{sec:validimpl}) este mai
+conservatoare și se aliniază cu ciclul real al competiției.
+
+\textbf{Coborâre pe gradient în varianta batch.} Pentru regresia logistică s-a ales varianta batch,
+nu cea stocastică, întrucât volumul moderat al datelor permite treceri complete rapide, iar
+actualizările sunt mai stabile și mai ușor de analizat prin curba de cost.
+
+\textbf{Hiperparametri ficși, fără reglare automată.} Reglarea hiperparametrilor pe sezonul de test
+ar fi introdus o formă subtilă de scurgere de informație, iar reglarea pe sezonul de validare ar fi
+complicat comparația. S-a optat pentru valori ficși, rezonabile (Tabelul~\ref{tab:hiperparametri}),
+astfel încât diferențele de performanță să reflecte algoritmii, lăsând optimizarea automată ca
+direcție de dezvoltare ulterioară (Capitolul~\ref{cap:concluzii}).
+
+\textbf{Imputarea cu valori implicite, în loc de eliminarea exemplelor.} Exemplele fără istoric
+(debutanți) sunt completate cu valori implicite, nu eliminate, pentru a păstra toate cursele și a
+nu introduce un dezechilibru artificial; valorile implicite sunt deterministe și strict cauzale.
+
+Aceste compromisuri reflectă prioritatea acordată rigorii metodologice și echității comparației,
+în detrimentul unei optimizări agresive a performanței absolute --- în acord cu scopul declarat al
+lucrării, acela de studiu comparativ.
 
 % =============================================================================
 \chapter{Rezultate}
@@ -836,40 +2054,65 @@ expusă printr-o interfață în linie de comandă.
 \section{Configurația experimentală}
 
 Experimentele folosesc setul de date descris în Capitolul~\ref{cap:rezolvare}, cu validare
-temporală pe sezoanele 2019--2025 (fiecare sezon prezis cu un model antrenat pe sezoanele
-anterioare). Hiperparametrii de bază sunt: pentru regresia logistică, pas de învățare $0{,}1$,
+temporală pe sezoanele de test 2020--2025. Conform schemei din Secțiunea~\ref{sec:validimpl},
+fiecare sezon $S$ este prezis cu un model antrenat pe sezoanele până la $S-2$, sezonul $S-1$ fiind
+ținut deoparte ca validare. Rezultă șase sezoane de test, însumând 131 de curse, fiecare cu un
+model reantrenat de la zero exclusiv pe trecut. Numărul de exemple de antrenament crește de la 420
+(pentru testul pe 2020) la 2500 (pentru testul pe 2025), pe măsură ce se acumulează sezoane.
+
+Cele patru metrici raportate sunt acuratețea clasificării binare, rata de nimerire a podiumului,
+podiumul exact și acuratețea câștigătorului (Top-1), definite în Secțiunea~\ref{sec:metrici}.
+Condițiile de antrenare și evaluare sunt identice pentru toate cele trei modele, astfel încât
+diferențele observate să reflecte exclusiv algoritmii. Hiperparametrii sunt ficși pe tot parcursul
+studiului (Tabelul~\ref{tab:hiperparametri}): pentru regresia logistică, pas de învățare $0{,}1$,
 3000 de iterații și regularizare $L_2$ cu $\lambda = 0{,}01$; pentru arbore, adâncime maximă 8;
 pentru pădure, 60 de arbori și adâncime maximă 12, cu $\sqrt{d}$ caracteristici per divizare.
+Pentru fiecare model se raportează atât mediile pe sezoane, cât și defalcarea pe fiecare sezon de
+test, alături de timpul de antrenare, măsurat pe parcursul validării.
 
 \section{Performanța comparativă}
 \label{sec:perf}
 
-Tabelul~\ref{tab:rezultate} prezintă performanța medie a celor trei modele pe sezoanele de
-test. Pădurea aleatoare obține cea mai bună acuratețe ($0{,}904$) și cea mai bună rată de
-nimerire a podiumului ($0{,}691$), în timp ce regresia logistică conduce la cel mai bun scor
-pentru predicția câștigătorului ($0{,}550$) și pentru suprapunerea cu primii trei din campionat
-($0{,}905$). Arborele de decizie simplu este, în mod constant, modelul cel mai slab, ceea ce
+Tabelul~\ref{tab:rezultate} prezintă performanța medie a celor trei modele pe sezoanele de test,
+pe cele patru metrici. Pădurea aleatoare obține cea mai bună acuratețe ($0{,}903$), cea mai bună
+rată de nimerire a podiumului ($0{,}673$) și cel mai bun scor pentru podiumul exact ($0{,}253$),
+în timp ce regresia logistică conduce la cea mai bună acuratețe a câștigătorului (Top-1,
+$0{,}536$). Arborele de decizie simplu este, în mod constant, modelul cel mai slab, ceea ce
 confirmă avantajul metodelor de ansamblu și al regularizării.
 
 \begin{table}[htbp]
   \caption{Performanța medie a modelelor pe sezoanele de test (validare temporală).}
   \label{tab:rezultate}
-  \begin{tabular}{l c c c c c}
+  \begin{tabular}{l c c c c}
     \toprule
-    \textbf{Model} & \textbf{Acuratețe} & \textbf{F1} & \textbf{Rată podium} &
-    \textbf{Câștigător} & \textbf{Top-3 campionat} \\
+    \textbf{Model} & \textbf{Acuratețe} & \textbf{Rată podium} &
+    \textbf{Podium exact} & \textbf{Câștigător (Top-1)} \\
     \midrule
-    Regresie logistică & 0,870 & \textbf{0,667} & 0,682 & \textbf{0,550} & \textbf{0,905} \\
-    Arbore de decizie  & 0,874 & 0,580 & 0,611 & 0,445 & 0,857 \\
-    Random Forest      & \textbf{0,904} & 0,664 & \textbf{0,691} & 0,466 & 0,810 \\
+    Regresie logistică & 0,867 & 0,672 & 0,240 & \textbf{0,536} \\
+    Arbore de decizie  & 0,872 & 0,581 & 0,167 & 0,388 \\
+    Random Forest      & \textbf{0,903} & \textbf{0,673} & \textbf{0,253} & 0,471 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Figura~\ref{fig:percursa} prezintă, comparativ, acuratețea și rata de nimerire a podiumului
-defalcate pe sezoane. Se observă că rata de nimerire a podiumului (Figura~\ref{fig:percursa}b)
-este în mod sistematic mai mică decât acuratețea (Figura~\ref{fig:percursa}a), aspect discutat
-în Secțiunea~\ref{sec:discutie}.
+Analiza tabelului relevă mai multe observații. În primul rând, pădurea aleatoare domină trei din
+cele patru metrici, dar cu marje modeste față de regresia logistică: diferența la rata de nimerire
+a podiumului este de doar $0{,}001$, practic neglijabilă, în timp ce la acuratețe avantajul este de
+$0{,}036$. Aceasta confirmă că, pe date tabelare, un model liniar simplu poate fi surprinzător de
+competitiv cu un ansamblu mult mai complex. În al doilea rând, regresia logistică conduce clar la
+acuratețea câștigătorului (Top-1, $0{,}536$ față de $0{,}471$ pentru pădure), sugerând că modelul
+liniar identifică mai bine favoritul fiecărei curse. În al treilea rând, arborele de decizie
+individual este în mod constant cel mai slab pe metricile de podium (rată $0{,}581$, podium exact
+$0{,}167$, Top-1 $0{,}388$), deși are o acuratețe comparabilă; acest contrast ilustrează limpede
+diferența dintre o acuratețe ridicată, ușor de obținut pe o clasă dezechilibrată, și capacitatea
+reală de a prezice podiumul. Rezultatul susține teoretic avantajul medierii din ansambluri, care
+reduce varianța mare a unui arbore unic (Secțiunea~\ref{sec:forest}).
+
+Figura~\ref{fig:percursa} prezintă acuratețea și rata de nimerire a podiumului defalcate pe
+sezoanele de test, iar Figura~\ref{fig:sumar} rezumă comparativ cele patru metrici (medii pe
+sezoane). Se observă că rata de nimerire a podiumului (Figura~\ref{fig:percursa}b) este în mod
+sistematic mai mică decât acuratețea (Figura~\ref{fig:percursa}a), aspect discutat în
+Secțiunea~\ref{sec:discutie}.
 
 \begin{figure}[htbp]
   \centering
@@ -884,197 +2127,341 @@ este în mod sistematic mai mică decât acuratețea (Figura~\ref{fig:percursa}a
     \includegraphics[width=\linewidth]{podium_hit_rate.png}\\
     {\small (b) Rată de nimerire a podiumului}
   \end{minipage}
-  \caption{Performanța pe sezoane: acuratețe (a) și rată de nimerire a podiumului (b).}
+  \caption{Performanța pe sezoanele de test: acuratețe (a) și rată de nimerire a podiumului (b).}
   \label{fig:percursa}
 \end{figure}
 
-\section{Capacitatea de discriminare: ROC și Precision-Recall}
-
-Figura~\ref{fig:roc} prezintă curbele ROC ale celor trei modele. Pădurea aleatoare și regresia
-logistică obțin valori AUC foarte apropiate ($0{,}936$, respectiv $0{,}934$), net superioare
-arborelui simplu ($0{,}834$). Tabelul~\ref{tab:auc} rezumă valorile AUC și AP (aria sub curba
-Precision-Recall). Conform Secțiunii~\ref{sec:dezechilibru}, curba Precision-Recall este mai
-informativă în prezența dezechilibrului de clase; aici regresia logistică obține cel mai bun AP
-($0{,}711$).
-
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.62\textwidth]{roc_all.png}
-  \caption{Curbele ROC pentru cele trei modele și valorile AUC asociate.}
-  \label{fig:roc}
+  \includegraphics[width=0.85\textwidth]{metric_summary.png}
+  \caption{Performanța comparativă a celor trei modele pe cele patru metrici (medii pe sezoanele
+    de test).}
+  \label{fig:sumar}
 \end{figure}
 
+\section{Variația performanței pe sezoane}
+\label{sec:variatie}
+
+Mediile din Tabelul~\ref{tab:rezultate} ascund o variabilitate notabilă de la un sezon la altul.
+Tabelul~\ref{tab:forest_sezoane} prezintă defalcarea pe sezoane a celor patru metrici pentru
+pădurea aleatoare, modelul cu cea mai bună performanță medie. Acuratețea este remarcabil de stabilă
+(între $0{,}891$ și $0{,}921$), iar rata de nimerire a podiumului se menține în jurul valorii de
+$0{,}67$. În schimb, acuratețea câștigătorului fluctuează puternic, de la $0{,}235$ în 2020 la
+$0{,}773$ în 2023.
+
 \begin{table}[htbp]
-  \caption{Aria sub curbele ROC (AUC) și Precision-Recall (AP).}
-  \label{tab:auc}
-  \begin{tabular}{l c c}
+  \caption{Performanța pădurii aleatoare pe fiecare sezon de test.}
+  \label{tab:forest_sezoane}
+  \begin{tabular}{l c c c c c c}
     \toprule
-    \textbf{Model} & \textbf{AUC} & \textbf{AP} \\
+    \textbf{Sezon de test} & \textbf{2020} & \textbf{2021} & \textbf{2022} & \textbf{2023} & \textbf{2024} & \textbf{2025} \\
     \midrule
-    Regresie logistică & 0,934 & \textbf{0,711} \\
-    Arbore de decizie  & 0,834 & 0,502 \\
-    Random Forest      & \textbf{0,936} & 0,687 \\
+    Acuratețe          & 0,903 & 0,909 & 0,900 & 0,895 & 0,891 & 0,921 \\
+    Rată podium        & 0,667 & 0,697 & 0,667 & 0,621 & 0,667 & 0,722 \\
+    Podium exact       & 0,294 & 0,318 & 0,182 & 0,182 & 0,250 & 0,292 \\
+    Câștigător (Top-1) & 0,235 & 0,455 & 0,364 & 0,773 & 0,500 & 0,500 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\section{Analiza hiperparametrilor}
+Această variație are o explicație legată de natura competiției. Acuratețea câștigătorului este
+ridicată în sezoanele dominate de un singur pilot --- în 2023, un pilot a câștigat marea majoritate
+a curselor, ceea ce face favoritul ușor de prezis (toate modelele ating valori mari în acel sezon:
+$0{,}909$ pentru regresia logistică și $0{,}773$ pentru pădure). Dimpotrivă, în sezoanele
+echilibrate, identificarea câștigătorului exact devine mult mai grea. Faptul că metricile la nivel
+de cursă (podium exact, câștigător) fluctuează mai mult decât acuratețea de clasificare este de
+așteptat: ele se calculează pe un număr mic de curse (17--24 per sezon), deci sunt mai sensibile la
+evenimente individuale, precum abandonuri sau condiții meteo neobișnuite.
 
-Curbele de validare ilustrează efectul fiecărui hiperparametru asupra performanței și asupra
-timpului de antrenare. Figura~\ref{fig:valcurve} arată că, pentru pădurea aleatoare, creșterea
-numărului de arbori îmbunătățește marginal performanța, dar crește aproape liniar timpul de
-antrenare --- un compromis tipic între calitate și cost. Căutarea pe grilă 2D
-(Figura~\ref{fig:heatmap}) confirmă că arborele de decizie atinge cele mai bune valori pentru
-adâncimi moderate și un număr minim de exemple pe frunză suficient de mare pentru a evita
-supraînvățarea.
+\section{Costul computațional al antrenării}
+\label{sec:cost}
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.75\textwidth]{valcurve_forest_n_estimators.png}
-  \caption{Curbă de validare: performanța și timpul de antrenare ale pădurii aleatoare în
-    funcție de numărul de arbori.}
-  \label{fig:valcurve}
-\end{figure}
+Pe lângă calitatea predicțiilor, studiul comparativ a măsurat și timpul de antrenare, înregistrat
+la fiecare reantrenare din procedura de validare. Tabelul~\ref{tab:timpi} prezintă timpul mediu de
+antrenare per fold. Ordinea confirmă analiza de complexitate din Secțiunea~\ref{sec:complexitate}:
+arborele de decizie este cel mai rapid, regresia logistică este de aproximativ trei ori mai lentă
+(din cauza celor 3000 de iterații de coborâre pe gradient), iar pădurea aleatoare este cea mai
+costisitoare, fiind în esență un multiplu al costului unui arbore. Chiar și așa, toate cele trei
+modele se antrenează sub o secundă în medie, ceea ce face întregul studiu rapid de reprodus.
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.62\textwidth]{heatmap_tree_max_depth_x_min_samples_leaf.png}
-  \caption{Căutare pe grilă 2D pentru arborele de decizie: rata de nimerire a podiumului în
-    funcție de adâncimea maximă și de numărul minim de exemple pe frunză.}
-  \label{fig:heatmap}
-\end{figure}
+\begin{table}[htbp]
+  \caption{Timpul mediu de antrenare per fold (validare temporală).}
+  \label{tab:timpi}
+  \begin{tabular}{l c}
+    \toprule
+    \textbf{Model} & \textbf{Timp mediu de antrenare (s)} \\
+    \midrule
+    Arbore de decizie  & 0,05 \\
+    Regresie logistică & 0,17 \\
+    Random Forest      & 0,82 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\section{Costul de calcul}
-
-Timpul de antrenare, măsurat pe setul complet de antrenament, este prezentat în
-Figura~\ref{fig:timp}. Pădurea aleatoare este de aproximativ douăzeci de ori mai lentă decât
-regresia logistică ($1{,}67$ s față de $0{,}29$ s), iar arborele simplu este cel mai rapid
-($0{,}09$ s). Coroborat cu Secțiunea~\ref{sec:perf}, acest rezultat evidențiază un compromis
-relevant pentru practică: regresia logistică oferă o capacitate de discriminare practic egală cu
-a pădurii (Tabelul~\ref{tab:auc}), la o fracțiune din costul de calcul.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.62\textwidth]{train_time_models.png}
-  \caption{Timpul de antrenare al celor trei modele pe setul complet de antrenament.}
-  \label{fig:timp}
-\end{figure}
-
-\section{Diagnostice de antrenare}
-
-Figura~\ref{fig:convergenta} prezintă două diagnostice de antrenare. Panoul (a) arată evoluția
-funcției de cost a regresiei logistice pe iterații, confirmând convergența coborârii pe gradient,
-în timp ce panoul (b) ilustrează scăderea erorii out-of-bag a pădurii aleatoare odată cu creșterea
-numărului de arbori, până la un platou în jurul valorii de $0{,}10$. Complementar,
-Figura~\ref{fig:stabilitate} prezintă distribuția ratei de nimerire a podiumului pe sezoanele de
-test: pădurea aleatoare are mediana cea mai bună, dar și o variație mai mare de la un sezon la
-altul, în timp ce regresia logistică este mai stabilă.
-
-\begin{figure}[htbp]
-  \centering
-  \begin{minipage}{0.49\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{convergence_logreg.png}\\
-    {\small (a) Convergența regresiei logistice}
-  \end{minipage}
-  \hfill
-  \begin{minipage}{0.49\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{oob_forest.png}\\
-    {\small (b) Eroarea out-of-bag a pădurii}
-  \end{minipage}
-  \caption{Diagnostice de antrenare: convergența (a) și eroarea out-of-bag (b).}
-  \label{fig:convergenta}
-\end{figure}
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.62\textwidth]{stability_podium_hit_rate.png}
-  \caption{Distribuția ratei de nimerire a podiumului pe sezoanele de test (stabilitatea
-    modelelor).}
-  \label{fig:stabilitate}
-\end{figure}
-
-\section{Sensibilitatea la pragul de decizie}
-
-Întrucât probabilitatea este transformată în etichetă printr-un prag, Figura~\ref{fig:prag}
-analizează variația metricilor de clasificare în funcție de acest prag pentru pădurea aleatoare.
-Se observă compromisul clasic precizie--recall: pe măsură ce pragul crește, precizia crește iar
-recall-ul scade, scorul $F_1$ atingând un maxim sub valoarea implicită de $0{,}5$. Acest rezultat
-este în concordanță cu natura dezechilibrată a problemei.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.7\textwidth]{threshold_forest.png}
-  \caption{Sensibilitatea metricilor de clasificare la pragul de decizie, pentru pădurea
-    aleatoare.}
-  \label{fig:prag}
-\end{figure}
+Acest rezultat nuanțează compromisul performanță--cost: pădurea aleatoare oferă cea mai bună
+calitate medie, dar cu un cost de antrenare de circa șaisprezece ori mai mare decât al arborelui;
+regresia logistică se remarcă drept o alegere echilibrată, apropiată de pădure ca performanță, dar
+considerabil mai ieftină.
 
 \section{Discuție: acuratețea în prezența dezechilibrului}
 \label{sec:discutie}
 
-Un rezultat aparent paradoxal este faptul că acuratețea depășește $0{,}87$ la toate modelele
-(Tabelul~\ref{tab:rezultate}), în timp ce rata de nimerire a podiumului este de circa $0{,}69$.
+Un rezultat aparent paradoxal este faptul că acuratețea depășește $0{,}86$ la toate modelele
+(Tabelul~\ref{tab:rezultate}), în timp ce rata de nimerire a podiumului este de circa $0{,}67$.
 Explicația rezidă în dezechilibrul de clase: deoarece doar aproximativ 15\% dintre exemple sunt
-pozitive, un clasificator care prezice mereu ``nu este podium'' atinge deja o acuratețe de
-circa 85\%. Prin urmare, acuratețea de $0{,}90$ reprezintă o îmbunătățire modestă față de acest
-reper trivial, motiv pentru care lucrarea raportează ca metrici principale scorul $F_1$, aria sub
-curba Precision-Recall și rata de nimerire a podiumului, în acord cu
-literatura~\cite{saito2015precision, he2009learning}.
+pozitive, un clasificator care prezice mereu ``nu este podium'' atinge deja o acuratețe de circa
+85\%. Prin urmare, acuratețea de $0{,}90$ reprezintă o îmbunătățire modestă față de acest reper
+trivial, motiv pentru care lucrarea raportează ca metrici principale rata de nimerire a podiumului,
+podiumul exact și acuratețea câștigătorului, alături de acuratețea clasificării, în acord cu
+literatura privind clasele dezechilibrate~\cite{saito2015precision, he2009learning}.
 
-\section{Studiu de caz: sezonul 2025}
+\section{Importanța caracteristicilor}
+\label{sec:importanta}
 
-Pentru sezonul 2025, pădurea aleatoare prezice corect toți cei trei piloți din primele trei
-poziții ale clasamentului de campionat. Figura~\ref{fig:standings} compară punctele reale cu
-cele estimate, ilustrând capacitatea modelului de a reconstitui ierarhia campionatului din
-predicții agregate la nivel de cursă.
+Dincolo de scorurile agregate, pădurea aleatoare oferă și un grad de interpretabilitate prin
+importanța caracteristicilor, calculată ca reducerea medie de impuritate (câștigul de informație)
+adusă de fiecare caracteristică în arborii ansamblului (Secțiunea~\ref{sec:forest}).
+Tabelul~\ref{tab:importanta} prezintă cele mai importante opt caracteristici pentru pădurea
+aleatoare, iar Figura~\ref{fig:importanta} le ilustrează grafic.
+
+\begin{table}[htbp]
+  \caption{Cele mai importante opt caracteristici pentru pădurea aleatoare.}
+  \label{tab:importanta}
+  \begin{tabular}{l l c}
+    \toprule
+    \textbf{Caracteristică} & \textbf{Categorie} & \textbf{Importanță} \\
+    \midrule
+    \texttt{grid}                  & grilă / calificări      & 0,143 \\
+    \texttt{quali\_pos}            & grilă / calificări      & 0,110 \\
+    \texttt{team\_form\_avg\_points} & forța echipei         & 0,100 \\
+    \texttt{form\_avg\_points}     & formă pilot             & 0,074 \\
+    \texttt{team\_form\_avg\_finish} & forța echipei         & 0,072 \\
+    \texttt{start\_top3}           & grilă / calificări      & 0,071 \\
+    \texttt{form\_avg\_grid}       & formă pilot             & 0,053 \\
+    \texttt{form\_avg\_finish}     & formă pilot             & 0,031 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Rezultatul confirmă intuiția din domeniu și analiza exploratorie (Secțiunea~\ref{sec:explorare}):
+poziția de start --- prin poziția pe grilă, poziția în calificări și indicatorul de plecare din
+primele trei --- este cel mai puternic predictor, însumând circa o treime din importanța totală.
+Urmează \emph{forța echipei} (forma de puncte și de sosire a echipei), reflectând faptul că în
+Formula 1 monopostul cântărește decisiv, apoi \emph{forma recentă a pilotului}. Este de remarcat că
+modelul distribuie importanța pe mai multe caracteristici complementare, ceea ce explică robustețea
+sa.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.75\textwidth]{standings_2025_forest.png}
-  \caption{Clasamentul de campionat 2025: puncte reale față de cele estimate de pădurea
-    aleatoare.}
-  \label{fig:standings}
+  \includegraphics[width=0.78\textwidth]{feature_importance_forest.png}
+  \caption{Importanța caracteristicilor pentru pădurea aleatoare (primele după importanță).}
+  \label{fig:importanta}
 \end{figure}
+
+Modul în care fiecare model își distribuie importanța diferă semnificativ și explică, în parte,
+comportamentul lor. Arborele de decizie individual concentrează peste jumătate din importanță într-o
+singură caracteristică (poziția în calificări), ceea ce îl face fragil --- o ilustrare directă a
+varianței mari a unui arbore unic. Regresia logistică, dimpotrivă, repartizează ponderi mari mai
+multor caracteristici legate de poziția de start și de clasament, comportament coerent cu natura sa
+liniară. Pădurea aleatoare se află la mijloc, combinând semnale multiple, ceea ce reflectă efectul
+de decorelare al subspațiilor aleatoare de caracteristici (Secțiunea~\ref{sec:forest}).
+
+\section{Efectul datelor in-sezon}
+\label{sec:rezinsezon}
+
+Conform metodologiei din Secțiunea~\ref{sec:insezon}, Tabelul~\ref{tab:insezon} compară, pe
+sezonul 2025, performanța medie cu și fără cursele in-sezon în antrenament. Efectul este pozitiv,
+dar modest și neuniform: cel mai consistent câștig apare la \emph{podiumul exact}, unde pădurea
+aleatoare crește de la $0{,}333$ la $0{,}375$ ($\Delta = +0{,}042$), iar arborele de la $0{,}167$
+la $0{,}208$ ($\Delta = +0{,}041$); rata de nimerire a podiumului crește pentru arbore
+($\Delta = +0{,}056$) și regresia logistică ($\Delta = +0{,}014$). Acuratețea rămâne practic
+neschimbată, fiind dominată de clasa majoritară (Secțiunea~\ref{sec:discutie}). Pe câteva metrici
+efectul este ușor negativ, ceea ce reflectă variabilitatea inerentă a unui singur sezon.
+
+\begin{table}[htbp]
+  \caption{Performanța medie pe sezonul 2025, cu și fără cursele in-sezon în antrenament.}
+  \label{tab:insezon}
+  \begin{tabular}{l l c c c c}
+    \toprule
+    \textbf{Model} & \textbf{Regim} & \textbf{Acuratețe} & \textbf{Rată podium} &
+    \textbf{Podium exact} & \textbf{Câștigător} \\
+    \midrule
+    Regresie logistică & fără in-sezon & 0,868 & 0,764 & 0,375 & 0,417 \\
+                       & cu in-sezon   & 0,868 & 0,778 & 0,375 & 0,417 \\
+    \midrule
+    Arbore de decizie  & fără in-sezon & 0,896 & 0,611 & 0,167 & 0,500 \\
+                       & cu in-sezon   & 0,887 & 0,667 & 0,208 & 0,417 \\
+    \midrule
+    Random Forest      & fără in-sezon & 0,921 & 0,750 & 0,333 & 0,500 \\
+                       & cu in-sezon   & 0,919 & 0,736 & 0,375 & 0,542 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Figura~\ref{fig:insezon} prezintă media cumulativă a celor patru metrici pe parcursul sezonului.
+Cele două regimuri pornesc identic la prima rundă (nu există curse in-sezon anterioare), apoi
+curbele „cu in-sezon" (linie continuă) se desprind treptat de cele „fără" (linie întreruptă), pe
+măsură ce modelul acumulează date din sezonul curent.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{insezon_2025_accuracy.png}\\
+    {\small (a) Acuratețe}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{insezon_2025_podium_hit_rate.png}\\
+    {\small (b) Rată de nimerire a podiumului}
+  \end{minipage}
+
+  \vspace{0.6em}
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{insezon_2025_exact_podium.png}\\
+    {\small (c) Podium exact}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{insezon_2025_winner_acc.png}\\
+    {\small (d) Câștigător (Top-1)}
+  \end{minipage}
+  \caption{Efectul curselor in-sezon pe sezonul 2025: media cumulativă pe runde, cu in-sezon
+    (linie continuă) față de fără (linie întreruptă), pentru cele trei modele.}
+  \label{fig:insezon}
+\end{figure}
+
+\section{Sinteza rezultatelor}
+\label{sec:sinteza_rez}
+
+Rezultatele experimentale conturează un tablou coerent. Pe ansamblu, pădurea aleatoare este modelul
+cel mai performant pe trei dintre cele patru metrici, dar avantajul său față de regresia logistică
+este mic, iar regresia logistică o depășește la acuratețea câștigătorului și se antrenează de
+aproximativ cinci ori mai repede. Arborele de decizie individual rămâne în mod constant cel mai
+slab pe metricile de podium, confirmând empiric superioritatea metodelor de ansamblu și a
+regularizării, discutată teoretic în Capitolul~\ref{cap:teorie}.
+
+Studiul evidențiază totodată trei aspecte metodologice. Primul este că acuratețea clasificării este
+o metrică înșelătoare în prezența dezechilibrului de clase (Secțiunea~\ref{sec:discutie}): valori de
+peste $0{,}90$ reprezintă doar o îmbunătățire modestă față de reperul trivial de 85\%, motiv pentru
+care metricile la nivel de cursă sunt cele relevante. Al doilea este că performanța variază
+considerabil de la un sezon la altul (Secțiunea~\ref{sec:variatie}), mai ales la nivelul predicției
+câștigătorului, în funcție de cât de echilibrat este sezonul. Al treilea este că antrenarea
+incrementală in-sezon aduce un câștig real, dar modest și neuniform, cel mai vizibil la podiumul
+exact. Aceste concluzii sunt reluate și interpretate în Capitolul~\ref{cap:concluzii}.
 
 % =============================================================================
 \chapter{Concluzii și dezvoltări ulterioare}
 \label{cap:concluzii}
 
-\section{Concluzii}
+\section{Concluzii generale}
 
-Lucrarea a atins obiectivele propuse. Cei trei algoritmi de învățare automată --- regresia
-logistică, arborele de decizie și pădurea aleatoare --- au fost implementați integral, fără
-biblioteci de învățare automată, și aplicați pe un set de date real din Formula 1, cu o etapă de
-inginerie a caracteristicilor strict cauzală care elimină scurgerea de informație. Studiul
-comparativ, realizat în condiții identice de antrenare și evaluare temporală, a evidențiat că:
+Lucrarea de față a abordat problema predicției podiumului unei curse de Formula 1 prin trei
+algoritmi de învățare automată implementați integral, fără biblioteci de învățare automată, și a
+realizat un studiu comparativ riguros între aceștia. Toate obiectivele formulate în
+Capitolul~\ref{cap:introducere} au fost atinse: cei trei algoritmi au fost implementați de la zero
+peste NumPy, aplicați pe un set de date real (3458 de rezultate din sezoanele 2018--2025) cu o etapă
+de inginerie a caracteristicilor strict cauzală, și comparați în condiții identice de antrenare și
+evaluare temporală. Dincolo de rezultatele numerice, valoarea principală a lucrării constă în
+metodologia riguroasă de evaluare --- validare temporală cu separare în antrenare, validare și test
+pe ani, fără scurgere de informație --- și în transparența completă a implementării.
+
+\section{Gradul de îndeplinire a obiectivelor}
+\label{sec:obiective}
+
+Tabelul~\ref{tab:obiective} prezintă sintetic gradul de îndeplinire a celor cinci obiective propuse
+în planul tematic, împreună cu dovada concretă a realizării fiecăruia. Toate obiectivele au fost
+îndeplinite integral.
+
+\begin{table}[htbp]
+  \caption{Gradul de îndeplinire a obiectivelor propuse.}
+  \label{tab:obiective}
+  \begin{tabular}{p{6.2cm} l p{6.2cm}}
+    \toprule
+    \textbf{Obiectiv} & \textbf{Stadiu} & \textbf{Dovadă / rezultat} \\
+    \midrule
+    Implementarea de la zero a trei modele (regresie logistică, arbore, pădure) folosind doar NumPy
+      & Îndeplinit
+      & cele trei module din pachetul \texttt{f1pred}, validate prin teste unitare
+        (Secțiunea~\ref{sec:testare}) \\
+    \addlinespace
+    Aplicarea predicțiilor pe date reale, cu inginerie a caracteristicilor strict cauzală
+      & Îndeplinit
+      & 29 de caracteristici cauzale, garanție anti-leakage testată automat
+        (Secțiunea~\ref{sec:features}) \\
+    \addlinespace
+    Studiu comparativ între cei trei algoritmi pe patru metrici
+      & Îndeplinit
+      & Tabelul~\ref{tab:rezultate} și Figura~\ref{fig:sumar} \\
+    \addlinespace
+    Evaluare cu separare temporală în antrenare, validare și test pe ani
+      & Îndeplinit
+      & validare pe șase sezoane de test (2020--2025), Secțiunea~\ref{sec:validimpl} \\
+    \addlinespace
+    Analiza efectului datelor in-sezon
+      & Îndeplinit
+      & comparația cu / fără in-sezon, Secțiunea~\ref{sec:rezinsezon} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Concluzii privind studiul comparativ}
+
+Studiul comparativ, realizat în condiții identice de antrenare și evaluare temporală, a evidențiat
+următoarele concluzii principale:
 
 \begin{itemize}
-  \item pădurea aleatoare oferă cea mai bună acuratețe și rată de nimerire a podiumului, dar la
-    cel mai mare cost de calcul;
-  \item regresia logistică atinge o capacitate de discriminare aproape identică (AUC și AP
-    comparabile sau superioare) la o fracțiune din timpul de antrenare, fiind cea mai eficientă
-    alegere în raport cu costul;
-  \item arborele de decizie individual este în mod constant inferior, ceea ce confirmă avantajul
-    regularizării și al metodelor de ansamblu;
-  \item în prezența dezechilibrului de clase, acuratețea este o metrică înșelătoare, iar
-    evaluarea trebuie să se bazeze pe $F_1$, AP și metrici specifice problemei.
+  \item pădurea aleatoare oferă cea mai bună acuratețe ($0{,}903$), rată de nimerire a podiumului
+    ($0{,}673$) și podium exact ($0{,}253$), confirmând avantajul metodelor de ansamblu pe date
+    tabelare;
+  \item regresia logistică obține cea mai bună acuratețe a câștigătorului (Top-1, $0{,}536$) și
+    rămâne foarte aproape de pădure pe celelalte metrici, deși se antrenează de aproximativ cinci
+    ori mai repede --- fiind, astfel, o alegere simplă, eficientă și competitivă;
+  \item arborele de decizie individual este în mod constant inferior pe metricile de podium, ceea ce
+    confirmă empiric varianța mare a unui arbore unic și avantajul regularizării și al medierii;
+  \item în prezența dezechilibrului de clase (circa 15\% exemple pozitive), acuratețea este o
+    metrică înșelătoare, iar evaluarea trebuie să se bazeze pe metrici specifice problemei: rata de
+    nimerire a podiumului, podiumul exact și acuratețea câștigătorului;
+  \item folosirea datelor deja disponibile din sezonul curent (antrenare incrementală in-sezon)
+    aduce îmbunătățiri reale, dar modeste și neuniforme, cele mai vizibile la podiumul exact.
 \end{itemize}
 
-Dincolo de rezultatele numerice, valoarea principală a lucrării constă în metodologia riguroasă
-de evaluare (validare temporală fără scurgere de informație) și în instrumentația de analiză a
-hiperparametrilor și a costului de calcul.
+\section{Contribuții personale}
+
+Principalele contribuții ale lucrării sunt: (i) implementarea integrală, de la zero, a celor trei
+algoritmi de învățare automată, inclusiv a mecanismelor lor interne (coborârea pe gradient,
+criteriul entropie--câștig de informație, bagging și subspații aleatoare); (ii) proiectarea unei
+etape de inginerie a caracteristicilor strict cauzale, însoțită de teste automate care garantează
+absența scurgerii de informație; (iii) construirea unei proceduri de validare temporală cu separare
+pe ani în antrenare, validare și test; (iv) implementarea manuală a unui set de metrici specifice
+problemei, calculate la nivel de cursă; și (v) analiza originală a efectului antrenării incrementale
+in-sezon. Întreaga soluție este expusă printr-o interfață în linie de comandă reproductibilă.
 
 \section{Dezvoltări ulterioare}
+\label{sec:dezvoltari}
 
-Pe termen scurt, soluția poate fi extinsă în mai multe direcții. În primul rând, includerea unor
-algoritmi suplimentari (de exemplu, mașini cu vectori suport sau metode de tip \emph{gradient
-boosting}) ar îmbogăți studiul comparativ. În al doilea rând, calibrarea explicită a
-probabilităților ar putea îmbunătăți interpretarea acestora și agregarea în campionat. În al
+Pe termen scurt, soluția poate fi extinsă în mai multe direcții, fără modificarea arhitecturii
+existente. În primul rând, includerea unor algoritmi suplimentari --- mașini cu vectori
+suport~\cite{cortes1995support} sau metode de tip \emph{gradient boosting}~\cite{friedman2001greedy,
+chen2016xgboost} --- ar îmbogăți studiul comparativ, modularitatea sistemului permițând adăugarea
+lor doar prin respectarea interfeței comune de model. În al doilea rând, calibrarea explicită a
+probabilităților (Secțiunea~\ref{sec:calibrare}), prin scalare Platt sau regresie izotonică, ar
+putea îmbunătăți interpretarea acestora și acuratețea agregării în clasamentul de campionat. În al
 treilea rând, ingineria caracteristicilor poate fi rafinată prin includerea unor informații de
-cronometraj mai fine (ritmul în antrenamente, degradarea anvelopelor). Nu în ultimul rând,
-optimizarea automată a hiperparametrilor și paralelizarea antrenării pădurii ar reduce costul de
-calcul evidențiat în Capitolul~\ref{cap:rezultate}.
+cronometraj mai fine (ritmul în antrenamentele libere, degradarea anvelopelor, performanța pe tururi
+rapide), pe care biblioteca FastF1 le pune la dispoziție. În al patrulea rând, optimizarea automată
+a hiperparametrilor --- realizată strict pe sezonul de validare, pentru a evita scurgerea de
+informație --- ar putea ridica performanța fiecărui model. Nu în ultimul rând, paralelizarea
+antrenării arborilor din pădure ar reduce costul computațional, singurul dezavantaj notabil al
+celui mai performant model.
+
+Pe termen mai lung, abordarea ar putea fi extinsă de la predicția podiumului la predicția poziției
+complete a fiecărui pilot, printr-o reformulare ca problemă de ordonare propriu-zisă (eng.
+\emph{learning to rank})~\cite{liu2009learning}, ceea ce ar exploata și mai bine structura
+competiției.
 
 % ----------------------------- BIBLIOGRAFIE ----------------------------------
 \printbibliography[heading=bibintoc, title={Bibliografie}]

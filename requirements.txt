@@ -1,4 +1,4 @@
-astf1>=3.6
+fastf1>=3.6
 numpy>=1.26
 pandas>=2.0
 matplotlib>=3.8

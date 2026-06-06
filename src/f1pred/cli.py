@@ -82,31 +82,30 @@ def cmd_train(args) -> None:
             print("  top feature-uri:", ", ".join(f"{n}={v:.3f}" for n, v in top))
 
 
+_METRIC_PLOT_FILE = {
+    "accuracy": "accuracy.png",
+    "podium_hit_rate": "podium_hit_rate.png",
+    "exact_podium_set": "exact_podium.png",
+    "winner_acc": "winner_acc.png",
+}
+
+
 def cmd_evaluate(args) -> None:
     config.ensure_dirs()
     feats = get_feature_dataset()
     keys = _resolve_models(args.model)
+    eval_metrics = list(config.EVAL_METRICS)
 
     results = {}
     for key in keys:
-        print(f"\n=== Validare rolling: {MODEL_NAMES[key]} ===")
+        print(f"\n=== Validare temporală (train ≤ S-2, validare S-1, test S): {MODEL_NAMES[key]} ===")
         results[key] = rolling_cross_year(feats, key, verbose=True)
 
-    print("\n================ SUMAR (medii pe sezoane-test) ================")
+    print("\n================ SUMAR (medii pe sezoanele de test) ================")
     summary_rows = []
     for key, res in results.items():
         ov = res.overall()
-        summary_rows.append(
-            {
-                "model": key,
-                "accuracy": ov.get("overall_accuracy", float("nan")),
-                "f1": ov.get("overall_f1", float("nan")),
-                "podium_hit": ov["mean_podium_hit_rate"],
-                "exact_podium": ov["mean_exact_podium_set"],
-                "winner_acc": ov["mean_winner_acc"],
-                "champ_top3": ov["mean_champ_top3_overlap"],
-            }
-        )
+        summary_rows.append({"model": key, **{m: ov[f"mean_{m}"] for m in eval_metrics}})
     summary = pd.DataFrame(summary_rows).round(3)
     print(summary.to_string(index=False))
 
@@ -119,129 +118,16 @@ def cmd_evaluate(args) -> None:
         from .viz import plots
 
         per_season_by_model = {k: r.per_season for k, r in results.items()}
-        plots.plot_metric_per_season(
-            per_season_by_model, "podium_hit_rate", config.PLOTS_DIR / "podium_hit_rate.png"
-        )
-        plots.plot_metric_per_season(
-            per_season_by_model, "accuracy", config.PLOTS_DIR / "accuracy.png"
-        )
+        for m in eval_metrics:
+            plots.plot_metric_per_season(per_season_by_model, m, config.PLOTS_DIR / _METRIC_PLOT_FILE[m])
+        plots.plot_metric_summary(summary, eval_metrics, config.PLOTS_DIR / "metric_summary.png")
         for key, res in results.items():
             if res.feature_importances is not None:
                 plots.plot_feature_importance(
                     res.feature_names, res.feature_importances, key,
                     config.PLOTS_DIR / f"feature_importance_{key}.png",
                 )
-            cm = metrics.confusion_matrix(res.y_true_all, res.y_pred_all)
-            plots.plot_confusion(cm, key, config.PLOTS_DIR / f"confusion_{key}.png")
         print(f"Grafice salvate în {config.PLOTS_DIR}")
-
-
-def cmd_experiments(args) -> None:
-    config.ensure_dirs()
-    from .evaluation import experiments as exp
-
-    feats = get_feature_dataset()
-    keys = _resolve_models(args.model)
-    make_plots = not args.no_plots
-    if make_plots:
-        from .viz import plots
-
-    sweep_grid = config.SWEEP_GRID_QUICK if args.quick else config.SWEEP_GRID
-    grid_2d_cfg = config.GRID_2D_QUICK if args.quick else config.GRID_2D
-    metric = config.PRIMARY_METRIC
-    EXP, PLT = config.EXPERIMENTS_DIR, config.PLOTS_DIR
-
-    print("\n=== Sweep 1D de hiperparametri ===")
-    for key in keys:
-        for param, values in sweep_grid.get(key, {}).items():
-            print(f"  [{MODEL_NAMES[key]}] {param} = {[exp.fmt_value(v) for v in values]}")
-            df = exp.sweep_1d(feats, key, param, values)
-            df.to_csv(EXP / f"sweep_{key}_{param}.csv", index=False)
-            if make_plots:
-                plots.plot_validation_curve(df, param, PLT / f"valcurve_{key}_{param}.png", key)
-
-    print(f"\n=== Grid search 2D (heatmap, metrică = {metric}) ===")
-    for key in keys:
-        if key not in grid_2d_cfg:
-            continue
-        pa, va, pb, vb = grid_2d_cfg[key]
-        print(f"  [{MODEL_NAMES[key]}] {pa} × {pb}")
-        mat = exp.grid_2d(feats, key, pa, va, pb, vb, metric=metric)
-        pd.DataFrame(mat, index=[exp.fmt_value(v) for v in va],
-                     columns=[exp.fmt_value(v) for v in vb]).to_csv(EXP / f"grid_{key}_{pa}_x_{pb}.csv")
-        if make_plots:
-            plots.plot_grid_heatmap(mat, va, vb, pa, pb, PLT / f"heatmap_{key}_{pa}_x_{pb}.png", key, metric)
-
-    print("\n=== Timp de antrenare per model ===")
-    tt = exp.train_time_per_model(feats, model_keys=keys)
-    tt.to_csv(EXP / "train_time.csv", index=False)
-    print(tt.to_string(index=False))
-    if make_plots:
-        plots.plot_train_time(tt, PLT / "train_time_models.png")
-
-    print("\n=== ROC / Precision-Recall / Calibrare / Stabilitate / Prag ===")
-    roc_curves, pr_curves, cal_curves, per_season_by_model = {}, {}, {}, {}
-    baseline = None
-    for key in keys:
-        res = rolling_cross_year(feats, key, verbose=False)
-        y_true, y_proba = res.y_true_all, res.y_proba_all
-        per_season_by_model[key] = res.per_season
-        if not len(y_true):
-            continue
-        if baseline is None:
-            baseline = float(np.mean(y_true))
-        fpr, tpr, _ = metrics.roc_curve(y_true, y_proba)
-        roc_curves[key] = (fpr, tpr, metrics.auc(fpr, tpr))
-        rec, prec, _ = metrics.pr_curve(y_true, y_proba)
-        pr_curves[key] = (rec, prec, metrics.average_precision(y_true, y_proba))
-        cal_curves[key] = metrics.calibration_curve(y_true, y_proba, n_bins=10)[:2]
-
-        thr = exp.threshold_sweep(y_true, y_proba)
-        thr.to_csv(EXP / f"threshold_{key}.csv", index=False)
-        if make_plots:
-            plots.plot_threshold_sweep(thr, key, PLT / f"threshold_{key}.png")
-        f1_best = thr.loc[thr["f1"].idxmax(), "threshold"]
-        print(f"  [{MODEL_NAMES[key]}] AUC={roc_curves[key][2]:.3f}  AP={pr_curves[key][2]:.3f}  "
-              f"F1 max @ prag={f1_best:.2f}")
-
-    if make_plots and roc_curves:
-        plots.plot_roc(roc_curves, PLT / "roc_all.png")
-        plots.plot_pr(pr_curves, PLT / "pr_all.png", baseline=baseline)
-        plots.plot_calibration(cal_curves, PLT / "calibration_all.png")
-        for metric_name in ("podium_hit_rate", "accuracy"):
-            vals = {k: df[metric_name].to_numpy() for k, df in per_season_by_model.items()
-                    if metric_name in df.columns and len(df)}
-            if vals:
-                plots.plot_metric_boxplot(vals, metric_name, PLT / f"stability_{metric_name}.png")
-
-    print("\n=== Learning curve (volum de date) ===")
-    lc = {}
-    for key in keys:
-        lc[key] = exp.learning_curve(feats, key)
-        lc[key].to_csv(EXP / f"learning_curve_{key}.csv", index=False)
-    if make_plots and lc:
-        plots.plot_learning_curve(lc, PLT / f"learning_curve_{metric}.png", metric=metric)
-
-    if "logreg" in keys:
-        loss = exp.convergence_logreg(feats)
-        pd.DataFrame({"iteration": np.arange(len(loss)), "loss": loss}).to_csv(
-            EXP / "convergence_logreg.csv", index=False)
-        if make_plots and len(loss):
-            plots.plot_convergence(loss, PLT / "convergence_logreg.png")
-        if len(loss):
-            print(f"\nConvergență logreg: {len(loss)} iterații, loss final = {loss[-1]:.4f}")
-
-    if "forest" in keys:
-        oob = exp.oob_vs_estimators(feats)
-        oob.to_csv(EXP / "oob_forest.csv", index=False)
-        if make_plots:
-            plots.plot_oob_vs_estimators(oob, PLT / "oob_forest.png")
-        best = oob.loc[oob["oob_error"].idxmin()]
-        print(f"OOB forest: eroare minimă = {best['oob_error']:.3f} la n_estimators = {int(best['n_estimators'])}")
-
-    print(f"\nCSV-uri salvate în {EXP}")
-    if make_plots:
-        print(f"Grafice salvate în {PLT}")
 
 
 def cmd_predict_race(args) -> None:
@@ -288,13 +174,24 @@ def cmd_predict_season(args) -> None:
         raise SystemExit(f"Nu există date pentru sezonul {args.season}.")
 
     key = _resolve_models(args.model)[0]
-    model, n_train = _fit_before(feats, key, args.season)
+    model, n_train = _fit_before(feats, key, args.season - 1)
     proba = predict_proba_for_races(model, season_df)
 
     pred_tbl = predicted_standings(season_df, proba)
     act_tbl = actual_standings(season_df)
 
-    print(f"\n=== Sezonul {args.season} — {MODEL_NAMES[key]} (antrenat pe {n_train} rânduri) ===")
+    print(f"\n=== Sezonul {args.season} — {MODEL_NAMES[key]} "
+          f"(antrenat pe sezoanele ≤ {args.season - 2}, {n_train} rânduri) ===")
+
+    val_df = feats[feats["season"] == args.season - 1]
+    if not val_df.empty:
+        val_proba = predict_proba_for_races(model, val_df)
+        _, y_val, _ = feature_matrix(val_df)
+        y_val_pred = (np.asarray(val_proba, dtype=float) >= 0.5).astype(int)
+        vpod = metrics.podium_metrics(val_df, val_proba)
+        print(f"\nValidare {args.season - 1}: acc={metrics.accuracy(y_val, y_val_pred):.3f} "
+              f"podium_hit={vpod['podium_hit_rate']:.3f} exact_podium={vpod['exact_podium_set']:.3f} "
+              f"top1={vpod['winner_acc']:.3f}")
 
     print("\nPodium prezis per cursă:")
     rows = []
@@ -327,12 +224,67 @@ def cmd_predict_season(args) -> None:
     race_tbl.to_csv(config.PREDICTIONS_DIR / f"podiums_{args.season}_{key}.csv", index=False)
     print(f"\nCSV-uri salvate în {config.PREDICTIONS_DIR}")
 
+
+def _race_metrics(model, race) -> dict:
+    proba = predict_proba_for_races(model, race)
+    _, y, _ = feature_matrix(race)
+    y_pred = (np.asarray(proba, dtype=float) >= 0.5).astype(int)
+    pod = metrics.podium_metrics(race, proba)
+    return {
+        "accuracy": metrics.accuracy(y, y_pred),
+        "podium_hit_rate": pod["podium_hit_rate"],
+        "exact_podium_set": pod["exact_podium_set"],
+        "winner_acc": pod["winner_acc"],
+    }
+
+
+def cmd_insezon(args) -> None:
+    config.ensure_dirs()
+    feats = get_feature_dataset()
+    season = args.season
+    keys = _resolve_models(args.model)
+    eval_metrics = list(config.EVAL_METRICS)
+
+    season_df = feats[feats["season"] == season]
+    if season_df.empty:
+        raise SystemExit(f"Nu există date pentru sezonul {season}.")
+    rounds = sorted(int(r) for r in season_df["round"].unique())
+
+    rows = []
+    for key in keys:
+        print(f"\n=== {MODEL_NAMES[key]}: cu vs fără curse in-sezon ({season}) ===")
+        base_model, _ = _fit_before(feats, key, season)
+        for r in rounds:
+            race = season_df[season_df["round"] == r]
+            if race.empty:
+                continue
+            aug_model, _ = _fit_before(feats, key, season, upto_round=r)
+            for regim, model in (("fara", base_model), ("cu", aug_model)):
+                rows.append({"round": r, "model": key, "regim": regim, **_race_metrics(model, race)})
+
+    df = pd.DataFrame(rows)
+    out_csv = config.OUTPUT_DIR / f"insezon_{season}.csv"
+    df.to_csv(out_csv, index=False)
+
+    print(f"\n================ SUMAR insezon {season} (medii pe sezon) ================")
+    summary = (df.groupby(["model", "regim"])[eval_metrics].mean().round(3))
+    print(summary.to_string())
+    print("\nΔ (cu − fără):")
+    for key in keys:
+        cu = summary.loc[(key, "cu")]
+        fara = summary.loc[(key, "fara")]
+        delta = (cu - fara).round(3)
+        print(f"  [{key:6s}] " + "  ".join(f"{m}={delta[m]:+.3f}" for m in eval_metrics))
+    print(f"\nCSV salvat în {out_csv}")
+
     if not args.no_plots:
         from .viz import plots
 
-        plots.plot_standings(pred_tbl, act_tbl, args.season,
-                             config.PLOTS_DIR / f"standings_{args.season}_{key}.png")
-        print(f"Grafic salvat în {config.PLOTS_DIR}")
+        for m in eval_metrics:
+            plots.plot_insezon_comparison(
+                df, m, season, config.PLOTS_DIR / f"insezon_{season}_{_METRIC_PLOT_FILE[m]}"
+            )
+        print(f"Grafice salvate în {config.PLOTS_DIR}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -346,16 +298,10 @@ def build_parser() -> argparse.ArgumentParser:
     pt.add_argument("--train-until", type=int, default=config.LAST_SEASON - 1, help="ultimul sezon de antrenament")
     pt.set_defaults(func=cmd_train)
 
-    pe = sub.add_parser("evaluate", help="Validare rolling cross-an + grafice")
+    pe = sub.add_parser("evaluate", help="Validare temporală train/validare/test pe ani + grafice")
     pe.add_argument("--model", default="all", help="logreg | tree | forest | all")
     pe.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
     pe.set_defaults(func=cmd_evaluate)
-
-    px = sub.add_parser("experiments", help="Sweep hiperparametri, timpi de antrenare și grafice de diagnostic")
-    px.add_argument("--model", default="all", help="logreg | tree | forest | all")
-    px.add_argument("--quick", action="store_true", help="grile reduse de hiperparametri (rulare rapidă)")
-    px.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
-    px.set_defaults(func=cmd_experiments)
 
     pr = sub.add_parser("predict-race", help="Podiumul prezis al unei curse")
     pr.add_argument("--season", type=int, required=True)
@@ -366,8 +312,13 @@ def build_parser() -> argparse.ArgumentParser:
     ps = sub.add_parser("predict-season", help="Podium per cursă + clasament campionat prezis")
     ps.add_argument("--season", type=int, required=True)
     ps.add_argument("--model", default="forest", help="logreg | tree | forest")
-    ps.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
     ps.set_defaults(func=cmd_predict_season)
+
+    pi = sub.add_parser("insezon", help="Compară performanța cu vs fără cursele in-sezon + grafice")
+    pi.add_argument("--season", type=int, default=config.LAST_SEASON, help="sezonul analizat (implicit ultimul)")
+    pi.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    pi.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
+    pi.set_defaults(func=cmd_insezon)
     return p
 
 
