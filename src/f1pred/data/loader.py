@@ -10,17 +10,19 @@ from .. import config
 warnings.filterwarnings("ignore")
 
 _CACHE_ENABLED = False
+_OFFLINE = None
 
 
-def enable_cache() -> None:
-    global _CACHE_ENABLED
-    if _CACHE_ENABLED:
+def enable_cache(offline: bool = True) -> None:
+    global _CACHE_ENABLED, _OFFLINE
+    if _CACHE_ENABLED and _OFFLINE == offline:
         return
     import fastf1
 
-    fastf1.Cache.enable_cache(str(config.CACHE_DIR))
+    if not _CACHE_ENABLED:
+        fastf1.Cache.enable_cache(str(config.CACHE_DIR))
     try:
-        fastf1.Cache.offline_mode(enabled=True)
+        fastf1.Cache.offline_mode(enabled=offline)
     except Exception:
         pass
     try:
@@ -28,6 +30,7 @@ def enable_cache() -> None:
     except Exception:
         pass
     _CACHE_ENABLED = True
+    _OFFLINE = offline
 
 
 def _finished_flag(status: str) -> bool:
@@ -49,20 +52,32 @@ def _weather_summary(session) -> dict:
     return out
 
 
-def _quali_positions(year: int, rnd: int) -> dict:
+def _quali_info(year: int, rnd: int) -> dict:
     import fastf1
 
     try:
         q = fastf1.get_session(year, rnd, "Q")
         q.load(laps=False, telemetry=False, weather=False, messages=False)
         res = q.results
-        return {
-            str(row.DriverId): float(row.Position)
-            for row in res.itertuples()
-            if pd.notna(row.Position)
-        }
     except Exception:
         return {}
+
+    out = {}
+    for row in res.itertuples():
+        if pd.isna(getattr(row, "Position", np.nan)):
+            continue
+        times = []
+        for q_col in ("Q1", "Q2", "Q3"):
+            t = getattr(row, q_col, None)
+            if t is not None and pd.notna(t):
+                secs = pd.Timedelta(t).total_seconds()
+                if secs > 0:
+                    times.append(secs)
+        out[str(row.DriverId)] = {
+            "pos": float(row.Position),
+            "best": float(min(times)) if times else np.nan,
+        }
+    return out
 
 
 def load_round(year: int, rnd: int, event) -> pd.DataFrame | None:
@@ -81,12 +96,13 @@ def load_round(year: int, rnd: int, event) -> pd.DataFrame | None:
         return None
 
     weather = _weather_summary(race)
-    quali = _quali_positions(year, rnd)
+    quali = _quali_info(year, rnd)
 
     event_format = str(event.get("EventFormat", "conventional"))
     rows = []
     for r in res.itertuples():
         did = str(r.DriverId)
+        qinfo = quali.get(did)
         rows.append(
             {
                 "season": int(year),
@@ -101,7 +117,8 @@ def load_round(year: int, rnd: int, event) -> pd.DataFrame | None:
                 "team": str(r.TeamName),
                 "team_id": str(r.TeamId),
                 "grid": float(r.GridPosition) if pd.notna(r.GridPosition) else np.nan,
-                "quali_pos": quali.get(did, np.nan),
+                "quali_pos": qinfo["pos"] if qinfo else np.nan,
+                "quali_best": qinfo["best"] if qinfo else np.nan,
                 "position": float(r.Position) if pd.notna(r.Position) else np.nan,
                 "status": str(r.Status),
                 "finished": float(_finished_flag(str(r.Status))),

@@ -47,6 +47,14 @@ def _fit_before(feats: pd.DataFrame, key: str, season: int, upto_round: int | No
     return model, len(train)
 
 
+def cmd_fetch_extras(args) -> None:
+    from .data import extras
+
+    df = extras.build_race_extras(throttle=args.throttle, force=args.force)
+    print(f"\nÎmbogățiri gata: {len(df)} rânduri -> {config.RACE_EXTRAS_PATH}")
+    print("Rulează apoi: python main.py build-data")
+
+
 def cmd_build_data(args) -> None:
     config.ensure_dirs()
     feats = get_feature_dataset(force=True)
@@ -128,6 +136,22 @@ def cmd_evaluate(args) -> None:
                     config.PLOTS_DIR / f"feature_importance_{key}.png",
                 )
         print(f"Grafice salvate în {config.PLOTS_DIR}")
+
+
+def cmd_tune(args) -> None:
+    config.ensure_dirs()
+    feats = get_feature_dataset()
+    keys = _resolve_models(args.model)
+
+    from .evaluation import tuning
+
+    best = tuning.run_tuning(feats, keys, metric=args.metric, plots=not args.no_plots)
+
+    print("\n============== CONFIGURAȚII OPTIME (selectate pe validare) ==============")
+    for key in keys:
+        print(f"  {MODEL_NAMES[key]:20s}: {best[key]}")
+    print("\nNotă: hiperparametrii din config.py NU au fost modificați. Tabelele complete "
+          "(toate configurațiile) sunt în outputs/tuning_<model>.csv.")
 
 
 def cmd_predict_race(args) -> None:
@@ -291,6 +315,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="f1pred", description="Predicție podium F1 cu 3 modele ML de la zero.")
     sub = p.add_subparsers(dest="command", required=True)
 
+    pf = sub.add_parser("fetch-extras",
+                        help="(o singură dată, cu rețea) descarcă tururi/pit-stops/safety car")
+    pf.add_argument("--throttle", type=float, default=0.5, help="pauză (s) între runde")
+    pf.add_argument("--force", action="store_true", help="reconstruiește de la zero (altfel reia)")
+    pf.set_defaults(func=cmd_fetch_extras)
+
     sub.add_parser("build-data", help="Construiește datasetul din cache-ul FastF1").set_defaults(func=cmd_build_data)
 
     pt = sub.add_parser("train", help="Antrenează și salvează un model")
@@ -302,6 +332,14 @@ def build_parser() -> argparse.ArgumentParser:
     pe.add_argument("--model", default="all", help="logreg | tree | forest | all")
     pe.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
     pe.set_defaults(func=cmd_evaluate)
+
+    ptn = sub.add_parser("tune", help="Optimizează hiperparametrii (grid search pe validare) + grafice")
+    ptn.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    ptn.add_argument("--metric", default=config.TUNE_METRIC,
+                     help="metrica de selecție pe validare "
+                          "(accuracy | podium_hit_rate | exact_podium_set | winner_acc)")
+    ptn.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
+    ptn.set_defaults(func=cmd_tune)
 
     pr = sub.add_parser("predict-race", help="Podiumul prezis al unei curse")
     pr.add_argument("--season", type=int, required=True)

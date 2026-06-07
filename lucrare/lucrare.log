@@ -1,9 +1,9 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.5) (preloaded format=xelatex 2026.6.5)  6 JUN 2026 20:42
+This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.5) (preloaded format=xelatex 2026.6.5)  7 JUN 2026 18:21
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
-**C:/Users/hoadr/Desktop/Licenta/f1-predictor/lucrare/lucrare.tex
-(C:/Users/hoadr/Desktop/Licenta/f1-predictor/lucrare/lucrare.tex
+**./lucrare.tex
+(lucrare.tex
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-04-28>
 (C:\Users\hoadr\AppData\Local\Programs\MiKTeX\tex/latex/base\report.cls
@@ -1145,29 +1145,29 @@ Package csquotes Info: Checking for multilingual support...
 Package csquotes Info: ... found 'babel' package.
 Package csquotes Info: Adjusting default style.
 Package csquotes Info: Redefining alias 'default' -> 'romanian'.
- (C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.aux)
+ (lucrare.aux)
 \openout1 = `lucrare.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 126.
-LaTeX Font Info:    ... okay on input line 126.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
 
 Package fontspec Info: 
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
@@ -1175,64 +1175,63 @@ Package fontspec Info:
 
 \symlegacymaths=\mathgroup6
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 126.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 126.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 126.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 126.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 126.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 126.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 126.
-LaTeX Font Info:    Redeclaring math accent \check on input line 126.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 126.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 126.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 126.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 126.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 126.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 87.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 87.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 87.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 87.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 87.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 87.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 87.
+LaTeX Font Info:    Redeclaring math accent \check on input line 87.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 87.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 87.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 87.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 87.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 87.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 126.
-
+(Font)              `operators' in the math version `normal' on input line 87.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmr/m/n --> TU/TimesNewRoman(0)/m/n on input line 1
-26.
+(Font)                  OT1/cmr/m/n --> TU/TimesNewRoman(0)/m/n on input line 8
+7.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 126.
+(Font)              `operators' in the math version `bold' on input line 87.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/m/n on input line 
-126.
+87.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/m/n on 
-input line 126.
+input line 87.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> TU/TimesNewRoman(0)/m/it on input line
- 126.
+ 87.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
 (Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/b/n on input line 
-126.
+87.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 126.
+(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 87.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> TU/Consolas(0)/m/n on input line 126.
+(Font)                  OT1/cmtt/m/n --> TU/Consolas(0)/m/n on input line 87.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/b/n on 
-input line 126.
+input line 87.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> TU/TimesNewRoman(0)/b/it on input lin
-e 126.
+e 87.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 126.
+(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 87.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> TU/Consolas(0)/b/n on input line 126.
+(Font)                  OT1/cmtt/m/n --> TU/Consolas(0)/b/n on input line 87.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -1273,9 +1272,8 @@ Package caption Info: hyperref package is loaded.
 Package caption Info: listings package is loaded.
 Package caption Info: End \AtBeginDocument code.
 \c@lstlisting=\count496
-Package hyperref Info: Link coloring OFF on input line 126.
-(C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.out)
-(C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.out)
+Package hyperref Info: Link coloring OFF on input line 87.
+(lucrare.out) (lucrare.out)
 \@outlinefile=\write5
 \openout5 = `lucrare.out'.
 
@@ -1294,9 +1292,9 @@ Package biblatex Info: Automatic encoding selection.
 
 Package biblatex Info: Trying to load bibliographic data...
 Package biblatex Info: ... file 'lucrare.bbl' found.
- (C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.bbl)
-Package biblatex Info: Reference section=0 on input line 126.
-Package biblatex Info: Reference segment=0 on input line 126.
+ (lucrare.bbl)
+Package biblatex Info: Reference section=0 on input line 87.
+Package biblatex Info: Reference segment=0 on input line 87.
 *geometry* verbose mode - [ newgeometry ] result:
 * driver: xetex
 * paper: a4paper
@@ -1329,13 +1327,13 @@ Package biblatex Info: Reference segment=0 on input line 126.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 163
+LaTeX Font Info:    Trying to load font information for U+msa on input line 121
 .
 
 (C:\Users\hoadr\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 163
+LaTeX Font Info:    Trying to load font information for U+msb on input line 121
 .
 
 (C:\Users\hoadr\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
@@ -1344,8 +1342,7 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 [1
 
 
-] [1] [1] (C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.toc
-[1
+] [1] [1] (lucrare.toc [1
 
 
 ] [2] [3])
@@ -1361,7 +1358,7 @@ Capitolul 2.
 [8
 
 ] [9] [10] [11] [12] [13] [14] [15] [16] [17] [18]
-Overfull \hbox (11.94978pt too wide) in paragraph at lines 1048--1051
+Overfull \hbox (11.94978pt too wide) in paragraph at lines 1000--1003
 \TU/TimesNewRoman(0)/m/n/12 Aceste metrici corespund evaluării de tip “top-$\OM
 L/cmm/m/it/12 k$\TU/TimesNewRoman(0)/m/n/12 ” din regăsirea informației și ordo
 nare (Secțiunea []2.2[]) [[]9[]].
@@ -1371,25 +1368,30 @@ nare (Secțiunea []2.2[]) [[]9[]].
 Capitolul 3.
 [22
 
-] [23] [24] [25] [26]
+] [23] [24] [25] [26] [27]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 1411.
- [27] [28] [29] [30] [31] [32] [33] [34] [35] [36]
+nput line 1392.
+ [28] [29] [30] [31] [32] [33] [34] [35] [36]
 [37] [38] [39] [40] [41]
 Capitolul 4.
 [42
 
 ]
+File: ../outputs/plots/tuning_forest_configs.png Graphic file (type bmp)
+<../outputs/plots/tuning_forest_configs.png>
+File: ../outputs/plots/tuning_forest_curves.png Graphic file (type bmp)
+<../outputs/plots/tuning_forest_curves.png>
+ [43] [44]
 File: ../outputs/plots/accuracy.png Graphic file (type bmp)
 <../outputs/plots/accuracy.png>
 File: ../outputs/plots/podium_hit_rate.png Graphic file (type bmp)
 <../outputs/plots/podium_hit_rate.png>
 File: ../outputs/plots/metric_summary.png Graphic file (type bmp)
 <../outputs/plots/metric_summary.png>
- [43] [44] [45]
+ [45] [46] [47]
 File: ../outputs/plots/feature_importance_forest.png Graphic file (type bmp)
 <../outputs/plots/feature_importance_forest.png>
- [46]
+ [48]
 File: ../outputs/plots/insezon_2025_accuracy.png Graphic file (type bmp)
 <../outputs/plots/insezon_2025_accuracy.png>
 File: ../outputs/plots/insezon_2025_podium_hit_rate.png Graphic file (type bmp)
@@ -1399,47 +1401,45 @@ File: ../outputs/plots/insezon_2025_exact_podium.png Graphic file (type bmp)
 <../outputs/plots/insezon_2025_exact_podium.png>
 File: ../outputs/plots/insezon_2025_winner_acc.png Graphic file (type bmp)
 <../outputs/plots/insezon_2025_winner_acc.png>
- [47] [48]
+ [49] [50]
 Capitolul 5.
 
-Underfull \hbox (badness 10000) in paragraph at lines 2388--2390
+Underfull \hbox (badness 10000) in paragraph at lines 2470--2472
 []|\TU/TimesNewRoman(0)/m/n/12 cele trei module din pachetul
  []
 
 
-Underfull \hbox (badness 1052) in paragraph at lines 2400--2401
+Underfull \hbox (badness 1052) in paragraph at lines 2482--2483
 []|\TU/TimesNewRoman(0)/m/n/12 Evaluare cu separare temporală în
  []
 
 
-Underfull \hbox (badness 3919) in paragraph at lines 2402--2403
+Underfull \hbox (badness 3919) in paragraph at lines 2484--2485
 []|\TU/TimesNewRoman(0)/m/n/12 validare pe șase sezoane de test
  []
 
-[49
+[51
 
-] [50] [51] [52
+] [52] [53] [54
 
-] [53]
-(C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.aux)
+] [55] (lucrare.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-04-28>
  ***********
 Package rerunfilecheck Info: File `lucrare.out' has not changed.
-(rerunfilecheck)             Checksum: 4DD8EB49AACE52CABFF9CFFF5A455873;16334.
+(rerunfilecheck)             Checksum: B9B8FB9A0B520CA40812C02D0949E422;16537.
 Package logreq Info: Writing requests to 'lucrare.run.xml'.
 \openout1 = `lucrare.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 36558 strings out of 402799
- 732448 string characters out of 5444870
- 1764108 words of memory out of 5000000
- 64955 multiletter control sequences out of 15000+600000
+ 36582 strings out of 402799
+ 732820 string characters out of 5444870
+ 1788981 words of memory out of 5000000
+ 64979 multiletter control sequences out of 15000+600000
  634682 words of font info for 116 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 84i,12n,94p,748b,5056s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,12n,94p,698b,5056s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on C:\Users\hoadr\Desktop\Licenta\f1-predictor\lucrare\lucrare.p
-df (56 pages).
+Output written on lucrare.xdv (58 pages, 1528864 bytes).

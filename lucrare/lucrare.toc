@@ -33,44 +33,45 @@
 \contentsline {section}{\numberline {3.1}Arhitectura sistemului}{22}{section.3.1}%
 \contentsline {section}{\numberline {3.2}Tehnologii folosite și organizarea codului}{23}{section.3.2}%
 \contentsline {section}{\numberline {3.3}Sursa de date}{24}{section.3.3}%
-\contentsline {section}{\numberline {3.4}Construirea setului de date}{24}{section.3.4}%
+\contentsline {section}{\numberline {3.4}Construirea setului de date}{25}{section.3.4}%
 \contentsline {section}{\numberline {3.5}Analiza exploratorie a setului de date}{25}{section.3.5}%
 \contentsline {section}{\numberline {3.6}Ingineria caracteristicilor cauzale}{26}{section.3.6}%
 \contentsline {subsection}{\numberline {3.6.1}Principiul cauzal și starea istorică}{27}{subsection.3.6.1}%
 \contentsline {subsection}{\numberline {3.6.2}Valori implicite pentru piloți și echipe fără istoric}{28}{subsection.3.6.2}%
-\contentsline {subsection}{\numberline {3.6.3}Inventarul complet al caracteristicilor}{28}{subsection.3.6.3}%
-\contentsline {subsection}{\numberline {3.6.4}Eticheta și matricea de caracteristici}{28}{subsection.3.6.4}%
-\contentsline {section}{\numberline {3.7}Implementarea modelelor}{28}{section.3.7}%
-\contentsline {subsection}{\numberline {3.7.1}Contractul comun și standardizarea}{30}{subsection.3.7.1}%
-\contentsline {subsection}{\numberline {3.7.2}Regresia logistică}{30}{subsection.3.7.2}%
-\contentsline {subsection}{\numberline {3.7.3}Arborele de decizie}{31}{subsection.3.7.3}%
-\contentsline {subsection}{\numberline {3.7.4}Pădurea aleatoare}{32}{subsection.3.7.4}%
-\contentsline {subsection}{\numberline {3.7.5}Complexitatea computațională}{33}{subsection.3.7.5}%
+\contentsline {subsection}{\numberline {3.6.3}Inventarul complet al caracteristicilor}{29}{subsection.3.6.3}%
+\contentsline {subsection}{\numberline {3.6.4}Eticheta și matricea de caracteristici}{29}{subsection.3.6.4}%
+\contentsline {section}{\numberline {3.7}Implementarea modelelor}{29}{section.3.7}%
+\contentsline {subsection}{\numberline {3.7.1}Contractul comun și standardizarea}{29}{subsection.3.7.1}%
+\contentsline {subsection}{\numberline {3.7.2}Regresia logistică}{31}{subsection.3.7.2}%
+\contentsline {subsection}{\numberline {3.7.3}Arborele de decizie}{32}{subsection.3.7.3}%
+\contentsline {subsection}{\numberline {3.7.4}Pădurea aleatoare}{33}{subsection.3.7.4}%
+\contentsline {subsection}{\numberline {3.7.5}Complexitatea computațională}{34}{subsection.3.7.5}%
 \contentsline {subsection}{\numberline {3.7.6}Fabrica de modele și hiperparametrii}{34}{subsection.3.7.6}%
-\contentsline {section}{\numberline {3.8}Predicția podiumului și agregarea în campionat}{34}{section.3.8}%
-\contentsline {subsection}{\numberline {3.8.1}Ordonarea piloților per cursă}{34}{subsection.3.8.1}%
-\contentsline {subsection}{\numberline {3.8.2}Agregarea în clasament de campionat}{35}{subsection.3.8.2}%
+\contentsline {section}{\numberline {3.8}Predicția podiumului și agregarea în campionat}{35}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}Ordonarea piloților per cursă}{35}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}Agregarea în clasament de campionat}{36}{subsection.3.8.2}%
 \contentsline {section}{\numberline {3.9}Validarea temporală pe ani}{36}{section.3.9}%
 \contentsline {section}{\numberline {3.10}Antrenarea incrementală in-sezon}{37}{section.3.10}%
-\contentsline {section}{\numberline {3.11}Metrici și instrumentația experimentală}{37}{section.3.11}%
-\contentsline {section}{\numberline {3.12}Interfața în linie de comandă}{38}{section.3.12}%
-\contentsline {subsection}{\numberline {3.12.1}Fluxul de lucru complet}{38}{subsection.3.12.1}%
-\contentsline {section}{\numberline {3.13}Testarea automată și verificarea corectitudinii}{39}{section.3.13}%
+\contentsline {section}{\numberline {3.11}Metrici și instrumentația experimentală}{38}{section.3.11}%
+\contentsline {section}{\numberline {3.12}Interfața în linie de comandă}{39}{section.3.12}%
+\contentsline {subsection}{\numberline {3.12.1}Fluxul de lucru complet}{39}{subsection.3.12.1}%
+\contentsline {section}{\numberline {3.13}Testarea automată și verificarea corectitudinii}{40}{section.3.13}%
 \contentsline {section}{\numberline {3.14}Reproductibilitate}{40}{section.3.14}%
-\contentsline {section}{\numberline {3.15}Decizii de proiectare și compromisuri}{40}{section.3.15}%
+\contentsline {section}{\numberline {3.15}Decizii de proiectare și compromisuri}{41}{section.3.15}%
 \contentsline {chapter}{\numberline {4}Rezultate}{42}{chapter.4}%
 \contentsline {section}{\numberline {4.1}Configurația experimentală}{42}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Performanța comparativă}{42}{section.4.2}%
-\contentsline {section}{\numberline {4.3}Variația performanței pe sezoane}{43}{section.4.3}%
-\contentsline {section}{\numberline {4.4}Costul computațional al antrenării}{44}{section.4.4}%
-\contentsline {section}{\numberline {4.5}Discuție: acuratețea în prezența dezechilibrului}{45}{section.4.5}%
-\contentsline {section}{\numberline {4.6}Importanța caracteristicilor}{45}{section.4.6}%
-\contentsline {section}{\numberline {4.7}Efectul datelor in-sezon}{46}{section.4.7}%
-\contentsline {section}{\numberline {4.8}Sinteza rezultatelor}{48}{section.4.8}%
-\contentsline {chapter}{\numberline {5}Concluzii și dezvoltări ulterioare}{49}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Concluzii generale}{49}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Gradul de îndeplinire a obiectivelor}{49}{section.5.2}%
-\contentsline {section}{\numberline {5.3}Concluzii privind studiul comparativ}{49}{section.5.3}%
-\contentsline {section}{\numberline {5.4}Contribuții personale}{50}{section.5.4}%
-\contentsline {section}{\numberline {5.5}Dezvoltări ulterioare}{51}{section.5.5}%
-\contentsline {chapter}{Bibliografie}{52}{chapter*.27}%
+\contentsline {section}{\numberline {4.2}Optimizarea hiperparametrilor}{42}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Performanța comparativă}{43}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Variația performanței pe sezoane}{46}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Costul computațional al antrenării}{46}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Discuție: acuratețea în prezența dezechilibrului}{47}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Importanța caracteristicilor}{47}{section.4.7}%
+\contentsline {section}{\numberline {4.8}Efectul datelor in-sezon}{48}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Sinteza rezultatelor}{50}{section.4.9}%
+\contentsline {chapter}{\numberline {5}Concluzii și dezvoltări ulterioare}{51}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Concluzii generale}{51}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Gradul de îndeplinire a obiectivelor}{51}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Concluzii privind studiul comparativ}{51}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Contribuții personale}{52}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Dezvoltări ulterioare}{53}{section.5.5}%
+\contentsline {chapter}{Bibliografie}{54}{chapter*.30}%

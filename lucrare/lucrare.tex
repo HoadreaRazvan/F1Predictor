@@ -1,26 +1,5 @@
-% =============================================================================
-%  PROIECT DE DIPLOMA
-%  "Comparare algoritmi de predictie cu invatare automata"
-%  Autor: Razvan-Bucur HOADREA
-%
-%  COMPILARE (recomandat XeLaTeX, pentru Times New Roman si Consolas reale):
-%     xelatex lucrare.tex
-%     biber   lucrare
-%     xelatex lucrare.tex
-%     xelatex lucrare.tex
-%
-%  Necesita: TeX Live / MiKTeX cu pachetele fontspec, babel-romanian, biblatex,
-%  biber, listings, tikz, booktabs, caption. Fonturile Times New Roman si
-%  Consolas exista implicit pe Windows.
-% =============================================================================
-% !TeX program = xelatex
-% !BIB program = biber
 \documentclass[12pt,a4paper]{report}
 
-% --- Fonturi (XeLaTeX) -------------------------------------------------------
-% Foloseste Times New Roman / Consolas DACA sunt instalate (local, pe Windows);
-% altfel cade automat pe clone livrate cu orice distributie TeX -> merge si pe
-% Overleaf, fara scanare lenta de fonturi (cauza probabila a timeout-ului).
 \usepackage{fontspec}
 \IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{%
   \IfFontExistsTF{TeXGyreTermes}{\setmainfont{TeXGyreTermes}}{%
@@ -29,33 +8,24 @@
   \IfFontExistsTF{Inconsolata}{\setmonofont{Inconsolata}}{%
     \IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}}{\setmonofont{Latin Modern Mono}}}}
 
-% --- Limba romana ------------------------------------------------------------
 \usepackage[romanian]{babel}
 
-% --- Geometrie pagina: margini 2 cm ------------------------------------------
 \usepackage[a4paper,margin=2cm]{geometry}
 
-% --- Spatiere: 1.5 randuri, paragrafe cu "space before" 12pt -----------------
 \usepackage{setspace}
 \onehalfspacing
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{12pt plus 2pt minus 1pt}
 
-% --- Matematica --------------------------------------------------------------
 \usepackage{amsmath,amssymb}
 
-% --- Figuri ------------------------------------------------------------------
 \usepackage{graphicx}
 \graphicspath{{../outputs/plots/}{../outputs/}{figuri/}}
 
-% --- Tabele ------------------------------------------------------------------
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{enumitem}
 
-% --- Captioane ---------------------------------------------------------------
-% Figuri: "Figura X.Y Titlu", centrate sub figura.
-% Tabele: "Tabelul X.Y Titlu", aliniate la stanga deasupra tabelului.
 \usepackage{caption}
 \captionsetup[figure]{labelsep=space, font=small, justification=centering, singlelinecheck=true, labelfont=bf, position=bottom}
 \captionsetup[table]{labelsep=space, font=small, justification=raggedright, singlelinecheck=false, labelfont=bf, position=top}
@@ -64,7 +34,6 @@
   \renewcommand{\tablename}{Tabelul}%
 }
 
-% --- Culori pentru listarile de cod ------------------------------------------
 \usepackage{xcolor}
 \definecolor{codecomment}{rgb}{0.00,0.50,0.00}
 \definecolor{codekeyword}{rgb}{0.13,0.29,0.65}
@@ -72,10 +41,8 @@
 \definecolor{codenumber}{rgb}{0.50,0.50,0.50}
 \definecolor{codeframe}{rgb}{0.80,0.80,0.80}
 
-% --- Listari de cod: Consolas 10pt, fundal alb, 1 rand, syntax highlight -----
 \usepackage{etoolbox}
 \usepackage{listings}
-% Codul se afiseaza la 1 rand (interlinie simpla), restul lucrarii la 1.5.
 \BeforeBeginEnvironment{lstlisting}{\begin{singlespace}}
 \AfterEndEnvironment{lstlisting}{\end{singlespace}}
 \lstdefinestyle{python}{
@@ -102,31 +69,23 @@
   extendedchars=true,
 }
 \lstset{style=python}
-\renewcommand{\lstlistingname}{Listarea}  % "Listarea X.Y"
+\renewcommand{\lstlistingname}{Listarea}
 
-% --- Diagrame (schema de arhitectura) ----------------------------------------
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
 
-% --- Referinte / hyperlinkuri ------------------------------------------------
 \usepackage[hidelinks]{hyperref}
 
-% --- Bibliografie IEEE prin biblatex/biber -----------------------------------
 \usepackage{csquotes}
 \usepackage[backend=biber, style=ieee, sorting=none]{biblatex}
 \addbibresource{referinte.bib}
 
-% --- Numerotare: ecuatii pe capitol (X.Y); figurile/tabelele o fac implicit ---
-% \counterwithin face parte din nucleul LaTeX (>= 2018), nu necesita pachet.
 \counterwithin{equation}{chapter}
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{2}
 
-% =============================================================================
 \begin{document}
 
-% -------------------------- PAGINI DE INCEPUT --------------------------------
-% Primele trei pagini au fost inlocuite conform modelului furnizat.
 \newgeometry{top=2cm,bottom=2cm,left=2cm,right=2cm}
 \pagestyle{empty}
 \begingroup
@@ -134,7 +93,6 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0pt}
 
-% ================= COPERTA =================
 \begin{titlepage}
 \thispagestyle{empty}
 
@@ -181,7 +139,6 @@ Specializarea CALCULATOARE
 
 \end{titlepage}
 
-% ================= PAGINA DUPĂ COPERTĂ =================
 \begin{titlepage}
 \thispagestyle{empty}
 
@@ -226,7 +183,6 @@ Specializarea CALCULATOARE
 
 \end{titlepage}
 
-% ================= PLAN TEMATIC =================
 \begin{titlepage}
 \thispagestyle{empty}
 
@@ -355,15 +311,12 @@ Proiectul de diplomă dat studentului: Răzvan-Bucur HOADREA
 \restoregeometry
 
 
-% Numerotarea paginilor incepe cu cuprinsul.
 \setcounter{page}{1}
 \pagenumbering{arabic}
 \pagestyle{plain}
 
-% ------------------------------- CUPRINS -------------------------------------
 \tableofcontents
 
-% =============================================================================
 \chapter{Introducere}
 \label{cap:introducere}
 
@@ -442,7 +395,6 @@ implementarea algoritmilor și a procedurii de validare. Capitolul~\ref{cap:rezu
 prezintă și interpretează rezultatele experimentale. Capitolul~\ref{cap:concluzii} sintetizează
 concluziile și propune direcții de dezvoltare ulterioară.
 
-% =============================================================================
 \chapter{Considerații teoretice}
 \label{cap:teorie}
 
@@ -1128,7 +1080,6 @@ antrenare, validare și test pe ani, care elimină scurgerea de informație; și
 metrici specifice problemei, calculate la nivel de cursă, alături de o analiză a efectului
 datelor disponibile in-sezon (Capitolul~\ref{cap:rezultate}).
 
-% =============================================================================
 \chapter{Rezolvarea temei de proiect}
 \label{cap:rezolvare}
 
@@ -1254,10 +1205,20 @@ omogene.
 
 Pentru fiecare rundă se încarcă două sesiuni: cursa propriu-zisă (codul \texttt{R}), din care se
 extrag poziția pe grilă, poziția finală, statusul de clasare, punctele și echipa fiecărui pilot,
-și sesiunea de calificări (codul \texttt{Q}), din care se preia poziția în calificări. La acestea
-se adaugă un rezumat al condițiilor meteo (prezența ploii, temperatura pistei și a aerului),
-calculat din datele meteorologice ale sesiunii. Sesiunile indisponibile în cache (de exemplu,
-curse anulate sau sesiuni nedescărcate) sunt sărite cu un avertisment, fără a întrerupe procesul.
+și sesiunea de calificări (codul \texttt{Q}), din care se preiau poziția în calificări și cel mai
+bun timp (minimul dintre rundele Q1/Q2/Q3). La acestea se adaugă un rezumat al condițiilor meteo
+(prezența ploii, temperatura pistei și a aerului), calculat din datele meteorologice ale sesiunii.
+Sesiunile indisponibile în cache (de exemplu, curse anulate sau sesiuni nedescărcate) sunt sărite
+cu un avertisment, fără a întrerupe procesul.
+
+Pe lângă aceste mărimi, o etapă de \emph{îmbogățire} executată o singură dată extrage din datele
+mai detaliate ale fiecărei curse patru semnale suplimentare: timpul opririlor la boxe (din
+înregistrările Ergast/Jolpica), ritmul de cursă al pilotului (mediana timpilor pe tur ``verzi'',
+normalizată pe circuit), apariția mașinii de siguranță (din mesajele de control al cursei) și
+nivelul de degradare a pneurilor (panta timpului pe tur în funcție de vârsta anvelopei). Rezultatul
+este salvat într-un fișier intermediar și reutilizat ulterior fără nicio cerere de rețea, astfel
+încât toate aceste semnale alimentează ingineria caracteristicilor (Secțiunea~\ref{sec:features})
+păstrând caracterul cauzal.
 
 O decizie de proiectare importantă este accesul \emph{strict offline}: FastF1 este configurat să
 citească exclusiv dintr-o memorie cache locală, fără nicio cerere de rețea. Această alegere are o
@@ -1265,7 +1226,9 @@ dublă justificare. Pe de o parte, asigură \emph{reproductibilitatea}: rezultat
 nu depind de momentul rulării sau de o eventuală modificare a datelor la sursă. Pe de altă parte,
 elimină dependența de conexiunea la internet și evită limitarea de rată (eng. \emph{rate
 limiting}) impusă de API-ul public, care altfel ar întrerupe încărcarea unui volum mare de
-sesiuni.
+sesiuni. Singura excepție este etapa de îmbogățire descrisă mai sus, care necesită rețea o
+\emph{singură dată} pentru a descărca datele detaliate; după ce rezultatul este salvat local,
+întregul flux redevine strict offline și complet reproductibil.
 
 \section{Construirea setului de date}
 \label{sec:construire}
@@ -1286,12 +1249,14 @@ coloanele rezumate în Tabelul~\ref{tab:coloane}.
     \midrule
     \texttt{season}, \texttt{round}     & sezonul și runda (identifică unic o cursă) \\
     \texttt{driver}, \texttt{team}      & codul pilotului și numele echipei \\
-    \texttt{grid}, \texttt{quali\_pos}  & poziția pe grilă și poziția în calificări \\
+    \texttt{grid}, \texttt{quali\_pos}, \texttt{quali\_best}  & poziția pe grilă, poziția și cel mai bun timp din calificări \\
     \texttt{position}                   & poziția finală în cursă \\
     \texttt{status}, \texttt{finished}  & statusul de clasare și indicatorul de finalizare \\
     \texttt{points}                     & punctele obținute în cursă \\
     \texttt{is\_sprint\_weekend}        & 1 dacă weekendul a inclus o cursă de sprint \\
     \texttt{rain}, \texttt{track\_temp}, \texttt{air\_temp} & rezumatul condițiilor meteo \\
+    \texttt{pit\_stop\_time}, \texttt{race\_pace} & timpul la boxe și ritmul de cursă (îmbogățiri) \\
+    \texttt{sc\_flag}, \texttt{tyre\_deg} & apariția Safety Car și degradarea pneurilor (îmbogățiri) \\
     \texttt{event\_name}, \texttt{circuit}, \texttt{event\_date} & contextul evenimentului \\
     \bottomrule
   \end{tabular}
@@ -1346,12 +1311,16 @@ derivați printre caracteristicile cele mai importante (Secțiunea~\ref{sec:feat
 
 Aceasta este etapa centrală a întregii soluții, deoarece de calitatea și corectitudinea
 caracteristicilor depinde atât performanța modelelor, cât și validitatea metodologică a întregului
-studiu. Pe baza considerentelor din Secțiunea~\ref{sec:leakage}, au fost construite 29 de
+studiu. Pe baza considerentelor din Secțiunea~\ref{sec:leakage}, au fost construite 44 de
 caracteristici numerice, toate \emph{strict cauzale}. Acestea se grupează în șase categorii,
 rezumate în Tabelul~\ref{tab:features}: poziția pe grilă și în calificări (cunoscute înainte de
 cursă), forma rulantă a pilotului (medii pe ultimele cinci curse), statistici cumulate la nivel de
 sezon, forța echipei, istoricul pe circuitul respectiv și contextul cursei (experiență, condiții
-meteo).
+meteo). Față de un nucleu inițial de 29 de caracteristici, setul a fost extins cu 15
+caracteristici suplimentare care surprind decalajele fine din calificări, comparația directă cu
+coechipierul, dinamica de echipă (calificări, abandonuri și opriri la boxe rulante) și
+proprietățile circuitului (dificultatea depășirilor, frecvența mașinii de siguranță, probabilitatea
+de ploaie și degradarea pneurilor), descrise în detaliu mai jos.
 
 \begin{table}[htbp]
   \caption{Categoriile de caracteristici folosite de modele.}
@@ -1360,14 +1329,14 @@ meteo).
     \toprule
     \textbf{Categorie} & \textbf{Exemple de caracteristici} & \textbf{Nr.} \\
     \midrule
-    Grilă / calificări     & poziție grilă, poziție calificări, pole                 & 5  \\
-    Formă rulantă pilot    & medie sosire, medie puncte, rată podium, rată abandon   & 6  \\
+    Grilă / calificări     & poziție grilă/calificări, pole, decalaje vs pole/coechipier & 9  \\
+    Formă rulantă pilot    & medie sosire/puncte, rată podium/abandon, ritm, ploaie  & 8  \\
     Sezon-to-date pilot    & puncte, poziție, podiumuri, victorii, curse             & 5  \\
-    Forța echipei          & formă echipă, puncte echipă, poziție echipă             & 4  \\
-    Istoric circuit        & medie sosire pilot / echipă, rată podium pe circuit     & 3  \\
+    Forța echipei          & formă/puncte/poziție, calificări/abandon/pit rulant, vs coechipier & 8  \\
+    Istoric circuit        & medie pilot/echipă, depășiri, safety car, ploaie, pneuri & 8  \\
     Context                & experiență, rundă, weekend cu sprint, vreme             & 6  \\
     \midrule
-    \textbf{Total}         &                                                         & \textbf{29} \\
+    \textbf{Total}         &                                                         & \textbf{44} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1378,17 +1347,29 @@ influențează rezultatul unei curse:
   \item \textbf{Grilă și calificări} --- poziția de start este, intuitiv, cel mai puternic predictor
     al rezultatului, fiind cunoscută cu certitudine înainte de cursă; pe lângă valorile brute, se
     adaugă indicatori binari pentru pole position și pentru plecarea din primele trei, respectiv
-    primele zece poziții.
+    primele zece poziții. La acestea se adaugă decalaje fine de \emph{timp}: diferența față de pole
+    și față de coechipier în calificări (mărimi care diferențiază piloți aflați pe poziții
+    apropiate), precum și diferența dintre poziția pe grilă și cea din calificări (care surprinde
+    penalizările pe grilă) și poziția pe grilă a coechipierului.
   \item \textbf{Forma rulantă a pilotului} --- medii pe ultimele cinci curse pentru poziția de
     sosire, puncte, rata de podium, rata de abandon și poziția pe grilă, plus ultimul rezultat;
-    aceste mărimi captează ``momentul de formă'' recent al pilotului.
+    aceste mărimi captează ``momentul de formă'' recent al pilotului. Tot aici intră ritmul mediu
+    de cursă din ultimele cinci curse (median al timpilor pe tur ``verzi'', normalizat pe circuit)
+    și performanța istorică a pilotului în condiții de ploaie.
   \item \textbf{Statistici sezon-to-date} --- puncte, poziție în clasament, podiumuri, victorii și
     număr de curse acumulate în sezonul curent până înaintea cursei prezise, reflectând competiti\-vi\-tatea
     de ansamblu din sezon.
   \item \textbf{Forța echipei} --- forma și clasamentul echipei surprind faptul că performanța în
-    Formula 1 depinde decisiv de monopost, nu doar de pilot.
+    Formula 1 depinde decisiv de monopost, nu doar de pilot. Pe lângă acestea, se adaugă media
+    rulantă a pozițiilor de calificare ale echipei, rata rulantă a abandonurilor și timpul mediu
+    al opririlor la boxe (eficiența operațională a echipei), precum și diferența de puncte dintre
+    pilot și coechipierul său --- un indicator direct al ierarhiei interne.
   \item \textbf{Istoricul pe circuit} --- media de sosire și rata de podium ale pilotului și echipei
-    pe circuitul respectiv, din toți anii anteriori, modelând afinitatea cu un anumit traseu.
+    pe circuitul respectiv, din toți anii anteriori, modelând afinitatea cu un anumit traseu. Se
+    adaugă caracteristici proprii circuitului, estimate cauzal din cursele anterioare de pe acel
+    traseu: dificultatea depășirilor (din schimbarea medie de poziție grilă\,$\to$\,sosire),
+    frecvența apariției mașinii de siguranță, probabilitatea de ploaie, nivelul de degradare a
+    pneurilor și rata istorică de podium de pe respectiva poziție de start.
   \item \textbf{Context} --- experiența (numărul de curse din carieră), runda din sezon, prezența
     unei curse de sprint și condițiile meteo, factori care nuanțează predicția.
 \end{itemize}
@@ -1453,7 +1434,7 @@ din pit lane, este înlocuită cu valoarea implicită pentru grilă.
 
 \subsection{Inventarul complet al caracteristicilor}
 
-Pentru transparență și reproductibilitate, Tabelul~\ref{tab:features_full} enumeră toate cele 29 de
+Pentru transparență și reproductibilitate, Tabelul~\ref{tab:features_full} enumeră toate cele 44 de
 caracteristici, împreună cu o descriere succintă și cu valoarea implicită folosită în absența
 istoricului. Caracteristicile marcate cu ``---'' în coloana de valori implicite sunt derivate
 direct din datele cursei curente (de exemplu, indicatorii binari calculați din poziția pe grilă)
@@ -1461,8 +1442,9 @@ direct din datele cursei curente (de exemplu, indicatorii binari calculați din 
 
 {\footnotesize
 \begin{table}[htbp]
-  \caption{Inventarul complet al celor 29 de caracteristici cauzale.}
+  \caption{Inventarul complet al celor 44 de caracteristici cauzale.}
   \label{tab:features_full}
+  \resizebox{\textwidth}{!}{%
   \begin{tabular}{l l c}
     \toprule
     \textbf{Caracteristică} & \textbf{Descriere} & \textbf{Implicit} \\
@@ -1496,8 +1478,25 @@ direct din datele cursei curente (de exemplu, indicatorii binari calculați din 
     \texttt{rain}                       & 1 dacă a plouat în cursă                         & 0 \\
     \texttt{track\_temp}                & temperatura medie a pistei ($^{\circ}$C)        & 30 \\
     \texttt{air\_temp}                  & temperatura medie a aerului ($^{\circ}$C)       & 22 \\
+    \midrule
+    \texttt{quali\_gap\_to\_pole}       & decalaj de timp față de pole în calificări (s)  & 1,5 \\
+    \texttt{quali\_gap\_to\_teammate}   & decalaj de timp față de coechipier în calificări (s) & 0 \\
+    \texttt{grid\_pos\_minus\_quali\_pos} & diferența poziție grilă $-$ poziție calificări  & 0 \\
+    \texttt{teammate\_grid\_pos}        & poziția pe grilă a coechipierului               & 15 \\
+    \texttt{driver\_points\_minus\_teammate} & diferența de puncte pilot $-$ coechipier   & 0 \\
+    \texttt{team\_avg\_quali\_pos\_last\_5} & media calificărilor echipei (ultimele 5 curse) & 12 \\
+    \texttt{team\_dnf\_rate\_last\_5}   & rata abandonurilor echipei (ultimele 5 curse)   & 0,1 \\
+    \texttt{team\_avg\_pit\_stop\_time} & timpul mediu la boxe al echipei (s)             & 24 \\
+    \texttt{circuit\_overtaking\_difficulty} & dificultatea depășirilor pe circuit (0--1) & 0,5 \\
+    \texttt{circuit\_safety\_car\_rate} & frecvența mașinii de siguranță pe circuit       & 0,4 \\
+    \texttt{circuit\_podium\_rate\_from\_grid\_pos} & rata istorică de podium de pe poziția de start & 0 \\
+    \texttt{rain\_probability}          & probabilitatea de ploaie (frecvență pe circuit) & 0,15 \\
+    \texttt{tyre\_degradation\_level}   & nivelul estimat de degradare a pneurilor (s/tur) & 0,05 \\
+    \texttt{driver\_wet\_performance}   & media de sosire a pilotului în condiții de ploaie & 12 \\
+    \texttt{race\_pace\_last\_5}        & ritmul mediu de cursă (ultimele 5 curse, normalizat) & 1,05 \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}%
+  }
 \end{table}
 }
 
@@ -1508,7 +1507,7 @@ direct din datele cursei curente (de exemplu, indicatorii binari calculați din 
 ansamblul celor 3458 de exemple, eticheta are media $0{,}150$, confirmând cantitativ dezechilibrul
 de clase discutat teoretic în Secțiunea~\ref{sec:dezechilibru}: doar circa 15\% dintre perechile
 cursă--pilot corespund unui podium. Setul de caracteristici, împreună cu eticheta, este materializat
-într-o matrice numerică $\mathbf{X} \in \mathbb{R}^{n \times 29}$ și un vector $\mathbf{y}$,
+într-o matrice numerică $\mathbf{X} \in \mathbb{R}^{n \times 44}$ și un vector $\mathbf{y}$,
 formatul standard consumat de toate cele trei modele.
 
 \section{Implementarea modelelor}
@@ -1707,7 +1706,7 @@ caracteristici, fiecare iterație fiind o trecere vectorizată peste toate datel
 costă aproximativ $O(d \cdot n \log n)$ per nivel, dominat de sortarea valorilor la căutarea
 divizărilor; vectorizarea prin sume cumulative reduce constanta acestui cost. Pădurea aleatoare
 multiplică costul arborelui cu numărul de arbori, dar fiecare arbore lucrează pe un subset de
-$\sqrt{d}$ caracteristici per divizare, ceea ce atenuează creșterea. În practică, pe setul de date
+$\log_2 d$ caracteristici per divizare, ceea ce atenuează creșterea. În practică, pe setul de date
 folosit, toate cele trei modele se antrenează în ordinul secundelor, iar timpul mediu de antrenare
 per fold este înregistrat de procedura de validare pentru comparație
 (Secțiunea~\ref{sec:validimpl}).
@@ -1717,34 +1716,35 @@ per fold este înregistrat de procedura de validare pentru comparație
 Pentru a uniformiza construirea modelelor, o funcție-fabrică creează modelul potrivit pornind de la
 o cheie scurtă (\texttt{logreg}, \texttt{tree} sau \texttt{forest}) și de la hiperparametrii din
 fișierul de configurare. Acest mecanism centralizează valorile hiperparametrilor și permite, în
-același timp, suprascrierea lor punctuală în experimente. Hiperparametrii sunt ficși pe tot
-parcursul studiului comparativ (Tabelul~\ref{tab:hiperparametri}), pentru ca diferențele de
-performanță să reflecte algoritmii, nu o reglare fină inegală. Valorile au fost alese pe baza
-recomandărilor uzuale din literatură (Capitolul~\ref{cap:teorie}): un pas de învățare moderat și un
-număr mare de iterații pentru convergența regresiei logistice; o adâncime limitată pentru arbore,
-care îi controlează varianța; și o pădure cu suficient de mulți arbori și $\sqrt{d}$ caracteristici
-per divizare, conform practicii consacrate pentru clasificare.
+același timp, suprascrierea lor punctuală în experimente --- proprietate folosită de procedura de
+optimizare automată (Secțiunea~\ref{sec:tuning}). Valorile din Tabelul~\ref{tab:hiperparametri} nu
+au fost alese arbitrar, ci \emph{selectate prin grid search pe sezonul de validare}: pentru fiecare
+model s-au evaluat toate combinațiile dintr-o grilă de căutare, reținându-se configurația care
+maximizează rata de nimerire a podiumului pe validare, fără a folosi vreodată sezonul de test
+(Secțiunea~\ref{sec:tuning}). O dată fixate, aceleași valori sunt folosite identic pe tot parcursul
+studiului comparativ, astfel încât diferențele de performanță să reflecte algoritmii, nu o reglare
+inegală.
 
 \begin{table}[htbp]
-  \caption{Hiperparametrii ficși ai celor trei modele.}
+  \caption{Hiperparametrii celor trei modele, selectați prin grid search pe sezonul de validare.}
   \label{tab:hiperparametri}
   \begin{tabular}{l l l}
     \toprule
     \textbf{Model} & \textbf{Hiperparametru} & \textbf{Valoare} \\
     \midrule
-    Regresie logistică & pas de învățare $\eta$           & $0{,}1$ \\
-                       & număr de iterații                & $3000$ \\
+    Regresie logistică & pas de învățare $\eta$           & $0{,}05$ \\
+                       & număr de iterații                & $1500$ \\
                        & regularizare $L_2$ ($\lambda$)   & $0{,}01$ \\
-                       & ponderare pe clase               & activată \\
+                       & ponderare pe clase               & dezactivată \\
     \midrule
-    Arbore de decizie  & adâncime maximă                  & $8$ \\
-                       & minim exemple pentru divizare    & $10$ \\
-                       & minim exemple pe frunză          & $5$ \\
+    Arbore de decizie  & adâncime maximă                  & $6$ \\
+                       & minim exemple pentru divizare    & $20$ \\
+                       & minim exemple pe frunză          & $10$ \\
     \midrule
     Random Forest      & număr de arbori                  & $60$ \\
                        & adâncime maximă                  & $12$ \\
-                       & caracteristici per divizare      & $\sqrt{d}$ \\
-                       & minim exemple pe frunză          & $4$ \\
+                       & caracteristici per divizare      & $\log_2 d$ \\
+                       & minim exemple pe frunză          & $2$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1848,8 +1848,8 @@ Bucla pornește de la al treilea sezon disponibil, deoarece schema necesită cel
 antrenament ($\leq S-2$) și un sezon de validare ($S-1$). Cu cele opt sezoane disponibile
 (2018--2025), rezultă șase sezoane de test (2020--2025), fiecare cu propriul model antrenat doar pe
 trecut. Pentru fiecare sezon de test se calculează și se rețin cele patru metrici, atât pe sezonul
-de test, cât și pe cel de validare; raportarea separată a validării, deși nu este folosită la
-reglarea hiperparametrilor (care sunt ficși), servește transparenței metodologice, arătând că
+de test, cât și pe cel de validare; raportarea separată a validării --- folosită și la selecția
+hiperparametrilor (Secțiunea~\ref{sec:tuning}) --- servește transparenței metodologice, arătând că
 performanța pe sezonul ținut deoparte este coerentă cu cea de test. Rezultatele individuale sunt
 agregate într-o structură care expune atât tabelul per sezon, cât și mediile globale și acuratețea
 ori scorul $F_1$ pe toate exemplele de test reunite, plus timpul mediu de antrenare per fold ---
@@ -2033,11 +2033,12 @@ conservatoare și se aliniază cu ciclul real al competiției.
 nu cea stocastică, întrucât volumul moderat al datelor permite treceri complete rapide, iar
 actualizările sunt mai stabile și mai ușor de analizat prin curba de cost.
 
-\textbf{Hiperparametri ficși, fără reglare automată.} Reglarea hiperparametrilor pe sezonul de test
-ar fi introdus o formă subtilă de scurgere de informație, iar reglarea pe sezonul de validare ar fi
-complicat comparația. S-a optat pentru valori ficși, rezonabile (Tabelul~\ref{tab:hiperparametri}),
-astfel încât diferențele de performanță să reflecte algoritmii, lăsând optimizarea automată ca
-direcție de dezvoltare ulterioară (Capitolul~\ref{cap:concluzii}).
+\textbf{Optimizarea hiperparametrilor pe validare, nu pe test.} Hiperparametrii fiecărui model au
+fost selectați automat prin grid search, dar \emph{exclusiv} pe sezonul de validare (S-1), niciodată
+pe sezonul de test --- altfel s-ar fi introdus o formă subtilă de scurgere de informație, iar
+estimarea finală ar fi devenit optimistă. O dată selectate, aceleași valori se folosesc identic
+pentru toate foldurile (Tabelul~\ref{tab:hiperparametri}, Secțiunea~\ref{sec:tuning}), astfel încât
+comparația dintre modele rămâne echitabilă.
 
 \textbf{Imputarea cu valori implicite, în loc de eliminarea exemplelor.} Exemplele fără istoric
 (debutanți) sunt completate cu valori implicite, nu eliminate, pentru a păstra toate cursele și a
@@ -2047,7 +2048,6 @@ Aceste compromisuri reflectă prioritatea acordată rigorii metodologice și ech
 în detrimentul unei optimizări agresive a performanței absolute --- în acord cu scopul declarat al
 lucrării, acela de studiu comparativ.
 
-% =============================================================================
 \chapter{Rezultate}
 \label{cap:rezultate}
 
@@ -2063,22 +2063,89 @@ model reantrenat de la zero exclusiv pe trecut. Numărul de exemple de antrename
 Cele patru metrici raportate sunt acuratețea clasificării binare, rata de nimerire a podiumului,
 podiumul exact și acuratețea câștigătorului (Top-1), definite în Secțiunea~\ref{sec:metrici}.
 Condițiile de antrenare și evaluare sunt identice pentru toate cele trei modele, astfel încât
-diferențele observate să reflecte exclusiv algoritmii. Hiperparametrii sunt ficși pe tot parcursul
-studiului (Tabelul~\ref{tab:hiperparametri}): pentru regresia logistică, pas de învățare $0{,}1$,
-3000 de iterații și regularizare $L_2$ cu $\lambda = 0{,}01$; pentru arbore, adâncime maximă 8;
-pentru pădure, 60 de arbori și adâncime maximă 12, cu $\sqrt{d}$ caracteristici per divizare.
-Pentru fiecare model se raportează atât mediile pe sezoane, cât și defalcarea pe fiecare sezon de
-test, alături de timpul de antrenare, măsurat pe parcursul validării.
+diferențele observate să reflecte exclusiv algoritmii. Hiperparametrii fiecărui model au fost
+selectați prin grid search pe sezonul de validare (Secțiunea~\ref{sec:tuning}) și apoi fixați
+identic pe tot parcursul studiului (Tabelul~\ref{tab:hiperparametri}): pentru regresia logistică,
+pas de învățare $0{,}05$, 1500 de iterații și regularizare $L_2$ cu $\lambda = 0{,}01$, fără
+ponderare pe clase; pentru arbore, adâncime maximă 6; pentru pădure, 60 de arbori și adâncime maximă
+12, cu $\log_2 d$ caracteristici per divizare. Pentru fiecare model se raportează atât mediile pe
+sezoane, cât și defalcarea pe fiecare sezon de test, alături de timpul de antrenare, măsurat pe
+parcursul validării.
+
+\section{Optimizarea hiperparametrilor}
+\label{sec:tuning}
+
+Spre deosebire de o alegere fixă, bazată doar pe recomandări din literatură, hiperparametrii celor
+trei modele au fost selectați automat printr-o căutare în grilă (eng.\ \emph{grid search}), evaluată
+\emph{exclusiv} pe sezonul de validare. Pentru fiecare model s-a definit o grilă de valori candidate
+pentru hiperparametrii principali, iar fiecare combinație a fost evaluată cu aceeași procedură de
+validare temporală (Secțiunea~\ref{sec:validimpl}); s-a reținut configurația care maximizează rata
+de nimerire a podiumului pe sezoanele de validare ($S-1$). Esențial, sezonul de test ($S$) nu intră
+niciodată în selecție --- altfel estimarea finală ar fi optimist părtinitoare ---, fiind raportat
+doar pentru a verifica cât de bine generalizează alegerea. Au fost evaluate 36 de configurații
+pentru regresia logistică, 36 pentru arbore și 54 pentru pădure.
+
+Tabelul~\ref{tab:tuning} prezintă, pentru fiecare model, configurația câștigătoare împreună cu rata
+de nimerire a podiumului pe validare (criteriul de selecție) și pe test (informativ). Comparativ cu
+valorile de pornire, optimizarea aduce un câștig clar la arbore (rata pe validare crește de la
+$0{,}601$ la $0{,}666$, iar pe test de la $0{,}599$ la $0{,}640$) și unul mic la pădure (de la
+$0{,}675$ la $0{,}692$ pe validare), în timp ce pentru regresia logistică cea mai bună configurație
+este la egalitate cu cea de pornire pe validare, dar diferă prin dezactivarea ponderării pe clase ---
+schimbare care, după cum se vede în Secțiunea~\ref{sec:perf}, îi îmbunătățește substanțial acuratețea
+și acuratețea câștigătorului.
+
+\begin{table}[htbp]
+  \caption{Configurația optimă a fiecărui model, selectată după rata de nimerire a podiumului pe validare.}
+  \label{tab:tuning}
+  \begin{tabular}{l c l c c}
+    \toprule
+    \textbf{Model} & \textbf{Config.} & \textbf{Cea mai bună configurație} &
+    \textbf{Validare} & \textbf{Test} \\
+    \midrule
+    Regresie logistică & 36 & $\eta{=}0{,}05$, 1500 iter., $\lambda{=}0{,}01$, fără ponderare & $0{,}681$ & $0{,}679$ \\
+    Arbore de decizie  & 36 & adâncime 6, split 20, frunză 10                                 & $0{,}666$ & $0{,}640$ \\
+    Random Forest      & 54 & 60 arbori, adâncime 12, frunză 2, $\log_2 d$                     & $0{,}692$ & $0{,}688$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Figura~\ref{fig:tuning_configs} ilustrează ``peisajul'' căutării pentru pădurea aleatoare: fiecare
+punct este o configurație, ordonate descrescător după rata pe validare, cu valorile de validare și
+de test suprapuse. Se observă că pădurea este remarcabil de \emph{robustă} la hiperparametri ---
+toate cele 54 de configurații se grupează strâns în jurul valorii de $0{,}68$ ---, ceea ce explică
+de ce câștigul optimizării este modest pentru acest model. Figura~\ref{fig:tuning_curves} prezintă
+efectul marginal al fiecărui hiperparametru (media pe configurațiile care împărtășesc o valoare):
+creșterea numărului de arbori ajută ușor, adâncimea optimă este în jur de 12, iar varianta
+$\log_2 d$ a numărului de caracteristici per divizare este marginal mai bună decât $\sqrt{d}$ pe
+validare. Aceleași grafice au fost generate și pentru regresia logistică și pentru arbore.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{tuning_forest_configs.png}
+  \caption{Optimizarea pădurii aleatoare: rata de nimerire a podiumului pentru fiecare dintre cele
+    54 de configurații (sortate descrescător după validare), validare vs.\ test. Steaua marchează
+    configurația selectată, iar rombul pe cea implicită de pornire.}
+  \label{fig:tuning_configs}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{tuning_forest_curves.png}
+  \caption{Efectul marginal al fiecărui hiperparametru al pădurii aleatoare asupra ratei de nimerire
+    a podiumului (validare vs.\ test).}
+  \label{fig:tuning_curves}
+\end{figure}
 
 \section{Performanța comparativă}
 \label{sec:perf}
 
 Tabelul~\ref{tab:rezultate} prezintă performanța medie a celor trei modele pe sezoanele de test,
-pe cele patru metrici. Pădurea aleatoare obține cea mai bună acuratețe ($0{,}903$), cea mai bună
-rată de nimerire a podiumului ($0{,}673$) și cel mai bun scor pentru podiumul exact ($0{,}253$),
-în timp ce regresia logistică conduce la cea mai bună acuratețe a câștigătorului (Top-1,
-$0{,}536$). Arborele de decizie simplu este, în mod constant, modelul cel mai slab, ceea ce
-confirmă avantajul metodelor de ansamblu și al regularizării.
+pe cele patru metrici. Hiperparametrii fiecărui model au fost selectați în prealabil prin grid
+search pe sezonul de validare (Secțiunea~\ref{sec:tuning}). Pădurea aleatoare obține cea mai bună
+acuratețe ($0{,}902$), cea mai bună rată de nimerire a podiumului ($0{,}688$) și cel mai bun scor
+pentru podiumul exact ($0{,}267$), în timp ce regresia logistică conduce la cea mai bună acuratețe
+a câștigătorului (Top-1, $0{,}541$). Arborele de decizie simplu este, în mod constant, modelul cel
+mai slab pe metricile de podium, ceea ce confirmă avantajul metodelor de ansamblu și al regularizării.
 
 \begin{table}[htbp]
   \caption{Performanța medie a modelelor pe sezoanele de test (validare temporală).}
@@ -2088,25 +2155,30 @@ confirmă avantajul metodelor de ansamblu și al regularizării.
     \textbf{Model} & \textbf{Acuratețe} & \textbf{Rată podium} &
     \textbf{Podium exact} & \textbf{Câștigător (Top-1)} \\
     \midrule
-    Regresie logistică & 0,867 & 0,672 & 0,240 & \textbf{0,536} \\
-    Arbore de decizie  & 0,872 & 0,581 & 0,167 & 0,388 \\
-    Random Forest      & \textbf{0,903} & \textbf{0,673} & \textbf{0,253} & 0,471 \\
+    Regresie logistică & 0,838 & 0,679 & 0,246 & \textbf{0,541} \\
+    Arbore de decizie  & 0,885 & 0,640 & 0,197 & 0,293 \\
+    Random Forest      & \textbf{0,902} & \textbf{0,688} & \textbf{0,267} & 0,437 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 Analiza tabelului relevă mai multe observații. În primul rând, pădurea aleatoare domină trei din
-cele patru metrici, dar cu marje modeste față de regresia logistică: diferența la rata de nimerire
-a podiumului este de doar $0{,}001$, practic neglijabilă, în timp ce la acuratețe avantajul este de
-$0{,}036$. Aceasta confirmă că, pe date tabelare, un model liniar simplu poate fi surprinzător de
-competitiv cu un ansamblu mult mai complex. În al doilea rând, regresia logistică conduce clar la
-acuratețea câștigătorului (Top-1, $0{,}536$ față de $0{,}471$ pentru pădure), sugerând că modelul
-liniar identifică mai bine favoritul fiecărei curse. În al treilea rând, arborele de decizie
-individual este în mod constant cel mai slab pe metricile de podium (rată $0{,}581$, podium exact
-$0{,}167$, Top-1 $0{,}388$), deși are o acuratețe comparabilă; acest contrast ilustrează limpede
+cele patru metrici (acuratețe $0{,}902$, rată de nimerire a podiumului $0{,}688$, podium exact
+$0{,}267$), în timp ce regresia logistică conduce la acuratețea câștigătorului ($0{,}541$). În al
+doilea rând, cele 15 caracteristici noi (Secțiunea~\ref{sec:features}) au adus câștiguri clare pe
+metricile specifice podiumului: față de varianta inițială cu 29 de caracteristici (rată podium
+$0{,}673$, podium exact $0{,}253$), pădurea ajunge la $0{,}688$, respectiv $0{,}267$, iar trei
+dintre primele opt caracteristici ca importanță sunt nou introduse (Secțiunea~\ref{sec:importanta}).
+În al treilea rând, optimizarea hiperparametrilor pe sezonul de validare
+(Secțiunea~\ref{sec:tuning}) a influențat regresia logistică cel mai vizibil: configurația
+selectată (fără ponderare pe clase, pas de învățare mai mic) îi echilibrează predicțiile, ridicând
+acuratețea la $0{,}838$ și acuratețea câștigătorului la $0{,}541$ --- cea mai bună dintre toate
+modelele --- păstrând o rată de nimerire a podiumului competitivă ($0{,}679$). În fine, arborele de
+decizie individual rămâne cel mai slab pe metricile de podium (rată $0{,}640$, podium exact
+$0{,}197$, câștigător $0{,}293$), deși are o acuratețe comparabilă ($0{,}885$); contrastul ilustrează
 diferența dintre o acuratețe ridicată, ușor de obținut pe o clasă dezechilibrată, și capacitatea
-reală de a prezice podiumul. Rezultatul susține teoretic avantajul medierii din ansambluri, care
-reduce varianța mare a unui arbore unic (Secțiunea~\ref{sec:forest}).
+reală de a prezice podiumul, confirmând avantajul medierii din ansambluri față de un arbore unic
+(Secțiunea~\ref{sec:forest}).
 
 Figura~\ref{fig:percursa} prezintă acuratețea și rata de nimerire a podiumului defalcate pe
 sezoanele de test, iar Figura~\ref{fig:sumar} rezumă comparativ cele patru metrici (medii pe
@@ -2145,9 +2217,9 @@ Secțiunea~\ref{sec:discutie}.
 Mediile din Tabelul~\ref{tab:rezultate} ascund o variabilitate notabilă de la un sezon la altul.
 Tabelul~\ref{tab:forest_sezoane} prezintă defalcarea pe sezoane a celor patru metrici pentru
 pădurea aleatoare, modelul cu cea mai bună performanță medie. Acuratețea este remarcabil de stabilă
-(între $0{,}891$ și $0{,}921$), iar rata de nimerire a podiumului se menține în jurul valorii de
-$0{,}67$. În schimb, acuratețea câștigătorului fluctuează puternic, de la $0{,}235$ în 2020 la
-$0{,}773$ în 2023.
+(între $0{,}886$ și $0{,}919$), iar rata de nimerire a podiumului se menține în jurul valorii de
+$0{,}69$. În schimb, acuratețea câștigătorului fluctuează puternic, de la $0{,}294$ în 2020 la
+$0{,}727$ în 2023.
 
 \begin{table}[htbp]
   \caption{Performanța pădurii aleatoare pe fiecare sezon de test.}
@@ -2156,18 +2228,18 @@ $0{,}773$ în 2023.
     \toprule
     \textbf{Sezon de test} & \textbf{2020} & \textbf{2021} & \textbf{2022} & \textbf{2023} & \textbf{2024} & \textbf{2025} \\
     \midrule
-    Acuratețe          & 0,903 & 0,909 & 0,900 & 0,895 & 0,891 & 0,921 \\
-    Rată podium        & 0,667 & 0,697 & 0,667 & 0,621 & 0,667 & 0,722 \\
-    Podium exact       & 0,294 & 0,318 & 0,182 & 0,182 & 0,250 & 0,292 \\
-    Câștigător (Top-1) & 0,235 & 0,455 & 0,364 & 0,773 & 0,500 & 0,500 \\
+    Acuratețe          & 0,900 & 0,911 & 0,898 & 0,886 & 0,896 & 0,919 \\
+    Rată podium        & 0,686 & 0,697 & 0,667 & 0,636 & 0,681 & 0,764 \\
+    Podium exact       & 0,294 & 0,318 & 0,182 & 0,182 & 0,250 & 0,375 \\
+    Câștigător (Top-1) & 0,294 & 0,318 & 0,364 & 0,727 & 0,417 & 0,500 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 Această variație are o explicație legată de natura competiției. Acuratețea câștigătorului este
 ridicată în sezoanele dominate de un singur pilot --- în 2023, un pilot a câștigat marea majoritate
-a curselor, ceea ce face favoritul ușor de prezis (toate modelele ating valori mari în acel sezon:
-$0{,}909$ pentru regresia logistică și $0{,}773$ pentru pădure). Dimpotrivă, în sezoanele
+a curselor, ceea ce face favoritul ușor de prezis (ambele modele puternice ating valori mari în
+acel sezon: $0{,}818$ pentru regresia logistică și $0{,}727$ pentru pădure). Dimpotrivă, în sezoanele
 echilibrate, identificarea câștigătorului exact devine mult mai grea. Faptul că metricile la nivel
 de cursă (podium exact, câștigător) fluctuează mai mult decât acuratețea de clasificare este de
 așteptat: ele se calculează pe un număr mic de curse (17--24 per sezon), deci sunt mai sensibile la
@@ -2179,8 +2251,8 @@ evenimente individuale, precum abandonuri sau condiții meteo neobișnuite.
 Pe lângă calitatea predicțiilor, studiul comparativ a măsurat și timpul de antrenare, înregistrat
 la fiecare reantrenare din procedura de validare. Tabelul~\ref{tab:timpi} prezintă timpul mediu de
 antrenare per fold. Ordinea confirmă analiza de complexitate din Secțiunea~\ref{sec:complexitate}:
-arborele de decizie este cel mai rapid, regresia logistică este de aproximativ trei ori mai lentă
-(din cauza celor 3000 de iterații de coborâre pe gradient), iar pădurea aleatoare este cea mai
+arborele de decizie este cel mai rapid, regresia logistică este de aproximativ o dată și jumătate
+mai lentă (din cauza celor 1500 de iterații de coborâre pe gradient), iar pădurea aleatoare este cea mai
 costisitoare, fiind în esență un multiplu al costului unui arbore. Chiar și așa, toate cele trei
 modele se antrenează sub o secundă în medie, ceea ce face întregul studiu rapid de reprodus.
 
@@ -2192,26 +2264,28 @@ modele se antrenează sub o secundă în medie, ceea ce face întregul studiu ra
     \textbf{Model} & \textbf{Timp mediu de antrenare (s)} \\
     \midrule
     Arbore de decizie  & 0,05 \\
-    Regresie logistică & 0,17 \\
-    Random Forest      & 0,82 \\
+    Regresie logistică & 0,08 \\
+    Random Forest      & 0,84 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 Acest rezultat nuanțează compromisul performanță--cost: pădurea aleatoare oferă cea mai bună
-calitate medie, dar cu un cost de antrenare de circa șaisprezece ori mai mare decât al arborelui;
-regresia logistică se remarcă drept o alegere echilibrată, apropiată de pădure ca performanță, dar
-considerabil mai ieftină.
+calitate medie, dar cu un cost de antrenare de circa șaptesprezece ori mai mare decât al arborelui;
+regresia logistică este considerabil mai ieftină și, după optimizarea hiperparametrilor, oferă cea
+mai bună acuratețe a câștigătorului și o acuratețe de clasificare bună --- o alegere echilibrată,
+simplă și competitivă.
 
 \section{Discuție: acuratețea în prezența dezechilibrului}
 \label{sec:discutie}
 
-Un rezultat aparent paradoxal este faptul că acuratețea depășește $0{,}86$ la toate modelele
-(Tabelul~\ref{tab:rezultate}), în timp ce rata de nimerire a podiumului este de circa $0{,}67$.
+Un rezultat aparent paradoxal este faptul că acuratețea celor mai bune modele depășește $0{,}87$
+(Tabelul~\ref{tab:rezultate}), în timp ce rata de nimerire a podiumului este de circa $0{,}69$.
 Explicația rezidă în dezechilibrul de clase: deoarece doar aproximativ 15\% dintre exemple sunt
 pozitive, un clasificator care prezice mereu ``nu este podium'' atinge deja o acuratețe de circa
-85\%. Prin urmare, acuratețea de $0{,}90$ reprezintă o îmbunătățire modestă față de acest reper
-trivial, motiv pentru care lucrarea raportează ca metrici principale rata de nimerire a podiumului,
+85\%. Prin urmare, acuratețea de $0{,}90$ a pădurii aleatoare reprezintă o îmbunătățire modestă față
+de acest reper trivial, motiv pentru care lucrarea raportează ca metrici principale rata de nimerire
+a podiumului,
 podiumul exact și acuratețea câștigătorului, alături de acuratețea clasificării, în acord cu
 literatura privind clasele dezechilibrate~\cite{saito2015precision, he2009learning}.
 
@@ -2231,25 +2305,28 @@ aleatoare, iar Figura~\ref{fig:importanta} le ilustrează grafic.
     \toprule
     \textbf{Caracteristică} & \textbf{Categorie} & \textbf{Importanță} \\
     \midrule
-    \texttt{grid}                  & grilă / calificări      & 0,143 \\
-    \texttt{quali\_pos}            & grilă / calificări      & 0,110 \\
-    \texttt{team\_form\_avg\_points} & forța echipei         & 0,100 \\
-    \texttt{form\_avg\_points}     & formă pilot             & 0,074 \\
-    \texttt{team\_form\_avg\_finish} & forța echipei         & 0,072 \\
-    \texttt{start\_top3}           & grilă / calificări      & 0,071 \\
-    \texttt{form\_avg\_grid}       & formă pilot             & 0,053 \\
-    \texttt{form\_avg\_finish}     & formă pilot             & 0,031 \\
+    \texttt{grid}                  & grilă / calificări      & 0,095 \\
+    \texttt{quali\_pos}            & grilă / calificări      & 0,088 \\
+    \texttt{circuit\_podium\_rate\_from\_grid\_pos} & istoric circuit & 0,072 \\
+    \texttt{team\_avg\_quali\_pos\_last\_5} & forța echipei    & 0,055 \\
+    \texttt{quali\_gap\_to\_pole}  & grilă / calificări      & 0,051 \\
+    \texttt{team\_form\_avg\_finish} & forța echipei         & 0,047 \\
+    \texttt{form\_avg\_points}     & formă pilot             & 0,043 \\
+    \texttt{team\_form\_avg\_points} & forța echipei         & 0,043 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Rezultatul confirmă intuiția din domeniu și analiza exploratorie (Secțiunea~\ref{sec:explorare}):
-poziția de start --- prin poziția pe grilă, poziția în calificări și indicatorul de plecare din
-primele trei --- este cel mai puternic predictor, însumând circa o treime din importanța totală.
-Urmează \emph{forța echipei} (forma de puncte și de sosire a echipei), reflectând faptul că în
-Formula 1 monopostul cântărește decisiv, apoi \emph{forma recentă a pilotului}. Este de remarcat că
-modelul distribuie importanța pe mai multe caracteristici complementare, ceea ce explică robustețea
-sa.
+Rezultatul confirmă și nuanțează intuiția din domeniu și analiza exploratorie
+(Secțiunea~\ref{sec:explorare}): poziția de start rămâne factorul dominant --- poziția pe grilă și
+poziția în calificări ocupă primele două locuri. Imediat urmează însă o caracteristică nou
+introdusă, \texttt{circuit\_podium\_rate\_from\_grid\_pos} (rata istorică de podium de pe poziția de
+start respectivă), iar în primele opt apar trei caracteristici noi --- alături de aceasta, media
+rulantă a calificărilor echipei și decalajul de timp față de pole ---, ceea ce confirmă că
+extinderea setului de caracteristici a adus semnal predictiv real, nu doar zgomot. Restul importanței
+se distribuie pe \emph{forța echipei} și pe \emph{forma recentă a pilotului}. Faptul că pădurea
+repartizează importanța pe multe caracteristici complementare (cea mai importantă însumează sub
+10\%) explică robustețea sa.
 
 \begin{figure}[htbp]
   \centering
@@ -2270,13 +2347,15 @@ de decorelare al subspațiilor aleatoare de caracteristici (Secțiunea~\ref{sec:
 \label{sec:rezinsezon}
 
 Conform metodologiei din Secțiunea~\ref{sec:insezon}, Tabelul~\ref{tab:insezon} compară, pe
-sezonul 2025, performanța medie cu și fără cursele in-sezon în antrenament. Efectul este pozitiv,
-dar modest și neuniform: cel mai consistent câștig apare la \emph{podiumul exact}, unde pădurea
-aleatoare crește de la $0{,}333$ la $0{,}375$ ($\Delta = +0{,}042$), iar arborele de la $0{,}167$
-la $0{,}208$ ($\Delta = +0{,}041$); rata de nimerire a podiumului crește pentru arbore
-($\Delta = +0{,}056$) și regresia logistică ($\Delta = +0{,}014$). Acuratețea rămâne practic
-neschimbată, fiind dominată de clasa majoritară (Secțiunea~\ref{sec:discutie}). Pe câteva metrici
-efectul este ușor negativ, ceea ce reflectă variabilitatea inerentă a unui singur sezon.
+sezonul 2025, performanța medie cu și fără cursele in-sezon în antrenament. Efectul este modest și,
+pe acest sezon, în mare parte neutru sau ușor negativ. Singurul câștig consecvent apare la
+acuratețea câștigătorului pentru regresia logistică ($\Delta = +0{,}042$); pentru pădure și arbore,
+adăugarea curselor in-sezon scade ușor acuratețea câștigătorului ($\Delta = -0{,}042$, respectiv
+$\Delta = -0{,}125$), în timp ce rata de nimerire a podiumului și podiumul exact rămân practic
+neschimbate, iar acuratețea de clasificare oscilează nesemnificativ (dominată de clasa majoritară,
+Secțiunea~\ref{sec:discutie}). Aceste rezultate reflectă variabilitatea inerentă a unui singur
+sezon și faptul că, pentru modelele deja regularizate prin optimizarea hiperparametrilor, câștigul
+marginal al datelor in-sezon este mic.
 
 \begin{table}[htbp]
   \caption{Performanța medie pe sezonul 2025, cu și fără cursele in-sezon în antrenament.}
@@ -2286,14 +2365,14 @@ efectul este ușor negativ, ceea ce reflectă variabilitatea inerentă a unui si
     \textbf{Model} & \textbf{Regim} & \textbf{Acuratețe} & \textbf{Rată podium} &
     \textbf{Podium exact} & \textbf{Câștigător} \\
     \midrule
-    Regresie logistică & fără in-sezon & 0,868 & 0,764 & 0,375 & 0,417 \\
-                       & cu in-sezon   & 0,868 & 0,778 & 0,375 & 0,417 \\
+    Regresie logistică & fără in-sezon & 0,927 & 0,750 & 0,333 & 0,458 \\
+                       & cu in-sezon   & 0,925 & 0,750 & 0,333 & 0,500 \\
     \midrule
-    Arbore de decizie  & fără in-sezon & 0,896 & 0,611 & 0,167 & 0,500 \\
-                       & cu in-sezon   & 0,887 & 0,667 & 0,208 & 0,417 \\
+    Arbore de decizie  & fără in-sezon & 0,912 & 0,722 & 0,250 & 0,583 \\
+                       & cu in-sezon   & 0,906 & 0,722 & 0,250 & 0,458 \\
     \midrule
-    Random Forest      & fără in-sezon & 0,921 & 0,750 & 0,333 & 0,500 \\
-                       & cu in-sezon   & 0,919 & 0,736 & 0,375 & 0,542 \\
+    Random Forest      & fără in-sezon & 0,921 & 0,750 & 0,333 & 0,625 \\
+                       & cu in-sezon   & 0,923 & 0,736 & 0,333 & 0,583 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -2338,11 +2417,15 @@ măsură ce modelul acumulează date din sezonul curent.
 \label{sec:sinteza_rez}
 
 Rezultatele experimentale conturează un tablou coerent. Pe ansamblu, pădurea aleatoare este modelul
-cel mai performant pe trei dintre cele patru metrici, dar avantajul său față de regresia logistică
-este mic, iar regresia logistică o depășește la acuratețea câștigătorului și se antrenează de
-aproximativ cinci ori mai repede. Arborele de decizie individual rămâne în mod constant cel mai
-slab pe metricile de podium, confirmând empiric superioritatea metodelor de ansamblu și a
-regularizării, discutată teoretic în Capitolul~\ref{cap:teorie}.
+cel mai performant, dominând trei dintre cele patru metrici (acuratețe, rată de nimerire a podiumului
+și podium exact), în timp ce regresia logistică --- după optimizarea hiperparametrilor pe validare
+--- conduce la acuratețea câștigătorului și devine o alternativă echilibrată și ieftină (se
+antrenează de aproximativ zece ori mai repede decât pădurea). Cele 15 caracteristici noi au
+îmbunătățit metricile specifice podiumului față de varianta inițială cu 29 de caracteristici, iar
+trei dintre primele opt caracteristici ca importanță sunt nou introduse. Arborele de decizie
+individual rămâne în mod constant cel mai slab pe metricile de podium, confirmând empiric
+superioritatea metodelor de ansamblu și a regularizării, discutată teoretic în
+Capitolul~\ref{cap:teorie}.
 
 Studiul evidențiază totodată trei aspecte metodologice. Primul este că acuratețea clasificării este
 o metrică înșelătoare în prezența dezechilibrului de clase (Secțiunea~\ref{sec:discutie}): valori de
@@ -2353,7 +2436,6 @@ câștigătorului, în funcție de cât de echilibrat este sezonul. Al treilea e
 incrementală in-sezon aduce un câștig real, dar modest și neuniform, cel mai vizibil la podiumul
 exact. Aceste concluzii sunt reluate și interpretate în Capitolul~\ref{cap:concluzii}.
 
-% =============================================================================
 \chapter{Concluzii și dezvoltări ulterioare}
 \label{cap:concluzii}
 
@@ -2390,7 +2472,7 @@ Tabelul~\ref{tab:obiective} prezintă sintetic gradul de îndeplinire a celor ci
     \addlinespace
     Aplicarea predicțiilor pe date reale, cu inginerie a caracteristicilor strict cauzală
       & Îndeplinit
-      & 29 de caracteristici cauzale, garanție anti-leakage testată automat
+      & 44 de caracteristici cauzale, garanție anti-leakage testată automat
         (Secțiunea~\ref{sec:features}) \\
     \addlinespace
     Studiu comparativ între cei trei algoritmi pe patru metrici
@@ -2414,12 +2496,13 @@ Studiul comparativ, realizat în condiții identice de antrenare și evaluare te
 următoarele concluzii principale:
 
 \begin{itemize}
-  \item pădurea aleatoare oferă cea mai bună acuratețe ($0{,}903$), rată de nimerire a podiumului
-    ($0{,}673$) și podium exact ($0{,}253$), confirmând avantajul metodelor de ansamblu pe date
-    tabelare;
-  \item regresia logistică obține cea mai bună acuratețe a câștigătorului (Top-1, $0{,}536$) și
-    rămâne foarte aproape de pădure pe celelalte metrici, deși se antrenează de aproximativ cinci
-    ori mai repede --- fiind, astfel, o alegere simplă, eficientă și competitivă;
+  \item pădurea aleatoare oferă cea mai bună acuratețe ($0{,}902$), rată de nimerire a podiumului
+    ($0{,}688$) și podium exact ($0{,}267$), confirmând avantajul metodelor de ansamblu pe date
+    tabelare; extinderea de la 29 la 44 de caracteristici a îmbunătățit metricile de podium;
+  \item regresia logistică, după optimizarea hiperparametrilor pe sezonul de validare, obține cea
+    mai bună acuratețe a câștigătorului (Top-1, $0{,}541$), o acuratețe bună de clasificare ($0{,}838$)
+    și o rată competitivă de nimerire a podiumului, antrenându-se de aproximativ zece ori mai repede
+    --- o alegere simplă, echilibrată și competitivă;
   \item arborele de decizie individual este în mod constant inferior pe metricile de podium, ceea ce
     confirmă empiric varianța mare a unui arbore unic și avantajul regularizării și al medierii;
   \item în prezența dezechilibrului de clase (circa 15\% exemple pozitive), acuratețea este o
@@ -2450,11 +2533,14 @@ chen2016xgboost} --- ar îmbogăți studiul comparativ, modularitatea sistemului
 lor doar prin respectarea interfeței comune de model. În al doilea rând, calibrarea explicită a
 probabilităților (Secțiunea~\ref{sec:calibrare}), prin scalare Platt sau regresie izotonică, ar
 putea îmbunătăți interpretarea acestora și acuratețea agregării în clasamentul de campionat. În al
-treilea rând, ingineria caracteristicilor poate fi rafinată prin includerea unor informații de
-cronometraj mai fine (ritmul în antrenamentele libere, degradarea anvelopelor, performanța pe tururi
-rapide), pe care biblioteca FastF1 le pune la dispoziție. În al patrulea rând, optimizarea automată
-a hiperparametrilor --- realizată strict pe sezonul de validare, pentru a evita scurgerea de
-informație --- ar putea ridica performanța fiecărui model. Nu în ultimul rând, paralelizarea
+treilea rând, ingineria caracteristicilor poate fi rafinată în continuare: pe lângă semnalele de
+cronometraj deja integrate (ritmul de cursă, degradarea anvelopelor, timpul opririlor la boxe și
+decalajele din calificări), s-ar putea adăuga ritmul din antrenamentele libere, modelarea pe
+stint-uri a uzurii pneurilor sau caracteristici derivate din telemetrie, pe care biblioteca FastF1
+le pune la dispoziție. În al patrulea rând, deși hiperparametrii au fost deja selectați automat prin
+grid search pe sezonul de validare (Secțiunea~\ref{sec:tuning}), o căutare mai amplă --- aleatoare
+sau bayesiană --- peste grile mai fine și spații mai mari, eventual cu re-optimizare separată la
+fiecare fold temporal, ar putea aduce câștiguri suplimentare. Nu în ultimul rând, paralelizarea
 antrenării arborilor din pădure ar reduce costul computațional, singurul dezavantaj notabil al
 celui mai performant model.
 
@@ -2463,7 +2549,6 @@ complete a fiecărui pilot, printr-o reformulare ca problemă de ordonare propri
 \emph{learning to rank})~\cite{liu2009learning}, ceea ce ar exploata și mai bine structura
 competiției.
 
-% ----------------------------- BIBLIOGRAFIE ----------------------------------
 \printbibliography[heading=bibintoc, title={Bibliografie}]
 
 \end{document}

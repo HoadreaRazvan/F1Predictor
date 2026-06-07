@@ -89,6 +89,74 @@ def plot_feature_importance(names, importances, model_key: str, path: Path, top:
     return path
 
 
+def plot_tuning_configs(df, model_key: str, metric: str, path: Path) -> Path:
+    d = df.sort_values(f"val_{metric}", ascending=False).reset_index(drop=True)
+    x = np.arange(1, len(d) + 1)
+    label = metric_label(metric)
+    color = _COLORS.get(model_key, "#555")
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    ax.plot(x, d[f"val_{metric}"].to_numpy(), "-o", ms=3, color=color, label=f"validare ({label})")
+    ax.plot(x, d[f"test_{metric}"].to_numpy(), "--s", ms=3, color="#999", label=f"test ({label})")
+    ax.scatter([1], [d[f"val_{metric}"].iloc[0]], s=160, marker="*", color="#d62728",
+               zorder=5, label="cea mai bună (validare)")
+    if "is_default" in d.columns and d["is_default"].any():
+        di = int(np.flatnonzero(d["is_default"].to_numpy())[0])
+        ax.scatter([di + 1], [d[f"val_{metric}"].iloc[di]], s=80, marker="D",
+                   facecolors="none", edgecolors="black", zorder=5, label="config. implicită")
+    ax.set_xlabel("Configurație (sortate descrescător după validare)")
+    ax.set_ylabel(label)
+    ax.set_ylim(0, 1)
+    ax.set_title(f"Tuning {model_key}: {label} pe fiecare configurație de hiperparametri")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_tuning_curves(df, model_key: str, metric: str, hyperparams, path: Path) -> Path:
+    label = metric_label(metric)
+    color = _COLORS.get(model_key, "#555")
+    hyperparams = list(hyperparams)
+    ncol = min(len(hyperparams), 4)
+    nrow = int(np.ceil(len(hyperparams) / ncol))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(3.7 * ncol, 3.4 * nrow),
+                             squeeze=False, sharey=True)
+
+    for idx, h in enumerate(hyperparams):
+        ax = axes[idx // ncol][idx % ncol]
+        g = df.groupby(h, dropna=False)
+        val_m = g[f"val_{metric}"].mean()
+        test_m = g[f"test_{metric}"].mean()
+        cats = list(val_m.index)
+        try:
+            cats = sorted(cats, key=lambda c: float(c))
+        except (TypeError, ValueError):
+            pass
+        xpos = np.arange(len(cats))
+        ax.plot(xpos, [val_m[c] for c in cats], "-o", ms=4, color=color, label="validare")
+        ax.plot(xpos, [test_m[c] for c in cats], "--s", ms=4, color="#999", label="test")
+        ax.set_xticks(xpos)
+        ax.set_xticklabels([str(c) for c in cats])
+        ax.set_title(h, fontsize=9)
+        ax.grid(alpha=0.3)
+        if idx % ncol == 0:
+            ax.set_ylabel(label)
+        if idx == 0:
+            ax.legend(fontsize=8)
+
+    for j in range(len(hyperparams), nrow * ncol):
+        axes[j // ncol][j % ncol].axis("off")
+    fig.suptitle(f"Tuning {model_key}: efectul marginal al fiecărui hiperparametru "
+                 f"({label}, validare vs test)", fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
 _MODEL_ORDER = ("logreg", "tree", "forest")
 _REGIM_STYLE = {"cu": "-", "fara": "--"}
 
