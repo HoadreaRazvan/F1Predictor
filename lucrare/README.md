@@ -51,13 +51,6 @@ Sau, mai simplu, cu `latexmk`:
 latexmk -xelatex lucrare.tex
 ```
 
-## De completat manual
-
-- **Pagina de titlu**: înlocuiește textele dintre paranteze pătrate `[...]` (universitate,
-  facultate, departament, coordonator) conform modelului oficial al departamentului.
-- **Bibliografia**: poți înlocui / completa `referinte.bib` cu export din Zotero
-  (Better BibTeX → format *Biblatex*). Stilul IEEE e deja configurat.
-
 ## Conformitate cu cerințele de redactare
 
 - Font de bază Times New Roman 12pt, spațiere 1,5 rânduri, aliniere justified, margini 2 cm.
