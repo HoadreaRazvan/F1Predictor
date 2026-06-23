@@ -5,7 +5,6 @@ import pandas as pd
 from .. import config
 from .race_podium import rank_drivers
 
-
 def predicted_standings(season_df: pd.DataFrame, proba) -> pd.DataFrame:
     df = season_df.copy()
     df["_proba"] = list(proba)
@@ -37,7 +36,6 @@ def predicted_standings(season_df: pd.DataFrame, proba) -> pd.DataFrame:
     table = table.sort_values("pred_points", ascending=False).reset_index(drop=True)
     table.insert(0, "pred_rank", range(1, len(table) + 1))
     return table
-
 
 def actual_standings(season_df: pd.DataFrame) -> pd.DataFrame:
     df = season_df.copy()

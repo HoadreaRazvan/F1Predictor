@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-
 class BaseModel:
-
     name: str = "base"
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "BaseModel":
@@ -20,9 +18,7 @@ class BaseModel:
     def feature_importances_(self) -> np.ndarray | None:
         return getattr(self, "_feature_importances", None)
 
-
 class Standardizer:
-
     def __init__(self) -> None:
         self.mean_: np.ndarray | None = None
         self.std_: np.ndarray | None = None

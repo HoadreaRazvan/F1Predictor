@@ -6,7 +6,6 @@ from f1pred.features.engineering import add_features
 
 _POINTS = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8}
 
-
 def _toy_feats(seasons=(2019, 2020, 2021, 2022), rounds=4, n_drivers=6, seed=0):
     rng = np.random.default_rng(seed)
     drivers = [f"D{i}" for i in range(n_drivers)]
@@ -32,14 +31,13 @@ def _toy_feats(seasons=(2019, 2020, 2021, 2022), rounds=4, n_drivers=6, seed=0):
                 )
     return add_features(pd.DataFrame(rows))
 
-
 def test_iter_configs_is_cartesian_product():
     grid = dict(a=[1, 2, 3], b=["x", "y"])
     cfgs = tuning.iter_configs(grid)
     assert len(cfgs) == 6
     assert set(cfgs[0]) == {"a", "b"}
-    assert len({tuple(sorted(c.items())) for c in cfgs}) == 6
 
+    assert len({tuple(sorted(c.items())) for c in cfgs}) == 6
 
 def test_tune_model_columns_and_sorted_by_validation():
     feats = _toy_feats()
@@ -50,9 +48,9 @@ def test_tune_model_columns_and_sorted_by_validation():
     for col in ("val_podium_hit_rate", "test_podium_hit_rate", "max_depth",
                 "min_samples_leaf", "fit_seconds", "is_default"):
         assert col in df.columns
+
     v = df["val_podium_hit_rate"].to_numpy()
     assert np.all(v[:-1] >= v[1:] - 1e-9)
-
 
 def test_best_config_selected_on_validation():
     feats = _toy_feats()
@@ -61,4 +59,5 @@ def test_best_config_selected_on_validation():
     bc = tuning.best_config(df, "podium_hit_rate", list(grid.keys()))
 
     assert set(bc.keys()) == {"max_depth", "min_samples_leaf"}
+
     assert df["val_podium_hit_rate"].iloc[0] == df["val_podium_hit_rate"].max()

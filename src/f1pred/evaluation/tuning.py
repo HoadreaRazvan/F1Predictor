@@ -14,8 +14,8 @@ _DEFAULT_PARAMS = {
     "logreg": config.LOGREG_PARAMS,
     "tree": config.TREE_PARAMS,
     "forest": config.FOREST_PARAMS,
+    "random": config.RANDOM_PARAMS,
 }
-
 
 def _native(v):
     if isinstance(v, np.bool_):
@@ -26,16 +26,13 @@ def _native(v):
         return float(v)
     return v
 
-
 def iter_configs(grid: dict) -> list[dict]:
     keys = list(grid.keys())
     return [dict(zip(keys, combo)) for combo in itertools.product(*(grid[k] for k in keys))]
 
-
 def _default_subset(model_key: str, grid: dict) -> dict:
     base = _DEFAULT_PARAMS[model_key]
     return {k: base[k] for k in grid if k in base}
-
 
 def tune_model(feats: pd.DataFrame, model_key: str, grid: dict | None = None, *,
                metric: str = None, verbose: bool = True) -> pd.DataFrame:
@@ -65,7 +62,6 @@ def tune_model(feats: pd.DataFrame, model_key: str, grid: dict | None = None, *,
     df = pd.DataFrame(rows)
     return df.sort_values(f"val_{metric}", ascending=False).reset_index(drop=True)
 
-
 def best_config(df: pd.DataFrame, metric: str, grid_keys: list[str]) -> dict:
     ranked = df.sort_values(
         [f"val_{metric}", "val_exact_podium_set", "fit_seconds"],
@@ -74,7 +70,6 @@ def best_config(df: pd.DataFrame, metric: str, grid_keys: list[str]) -> dict:
     top = ranked.iloc[0]
     return {k: _native(top[k]) for k in grid_keys}
 
-
 def run_tuning(feats: pd.DataFrame, keys, metric: str = None, *,
                save: bool = True, plots: bool = True) -> dict:
     metric = metric or config.TUNE_METRIC
@@ -82,7 +77,11 @@ def run_tuning(feats: pd.DataFrame, keys, metric: str = None, *,
     best = {}
 
     for key in keys:
-        grid = config.GRIDS[key]
+        grid = config.GRIDS.get(key, {})
+        if not grid:
+            print(f"\n=== '{key}': fără hiperparametri de optimizat (se sare peste) ===")
+            best[key] = {}
+            continue
         n = len(iter_configs(grid))
         print(f"\n=== Optimizare '{key}': {n} configurații "
               f"(selecție după val_{metric}) ===")

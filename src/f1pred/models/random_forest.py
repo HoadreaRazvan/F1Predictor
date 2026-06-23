@@ -5,7 +5,6 @@ import numpy as np
 from .base import BaseModel
 from .decision_tree import DecisionTree
 
-
 class RandomForest(BaseModel):
     name = "forest"
 
@@ -41,6 +40,7 @@ class RandomForest(BaseModel):
         rng = np.random.default_rng(self.random_state)
 
         self.trees = []
+
         oob_sum = np.zeros(n)
         oob_count = np.zeros(n)
 

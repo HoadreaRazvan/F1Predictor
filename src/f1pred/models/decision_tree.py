@@ -4,7 +4,6 @@ import numpy as np
 
 from .base import BaseModel
 
-
 def _binary_entropy(p: np.ndarray) -> np.ndarray:
     p = np.asarray(p, dtype=float)
     out = np.zeros_like(p)
@@ -13,12 +12,10 @@ def _binary_entropy(p: np.ndarray) -> np.ndarray:
         out[m] -= r[m] * np.log2(r[m])
     return out
 
-
 def _node_entropy(pos: float, total: float) -> float:
     if total == 0:
         return 0.0
     return float(_binary_entropy(np.array([pos / total]))[0])
-
 
 class _Node:
     __slots__ = ("feature", "threshold", "left", "right", "value", "is_leaf")
@@ -31,9 +28,7 @@ class _Node:
         self.value: float = 0.0
         self.is_leaf: bool = False
 
-
 class DecisionTree(BaseModel):
-
     name = "tree"
 
     def __init__(
@@ -100,6 +95,7 @@ class DecisionTree(BaseModel):
             return node
 
         mask = X[:, feat] <= thr
+
         self._importance_acc[feat] += gain * n
 
         node.feature = feat
@@ -132,12 +128,14 @@ class DecisionTree(BaseModel):
             y_sorted = y[order]
 
             cum_pos = np.cumsum(y_sorted)
+
             left_total = np.arange(1, n)
             left_pos = cum_pos[:-1]
             right_total = n - left_total
             right_pos = total_pos - left_pos
 
             valid = x_sorted[1:] != x_sorted[:-1]
+
             valid &= (left_total >= min_leaf) & (right_total >= min_leaf)
             if not valid.any():
                 continue
@@ -152,6 +150,7 @@ class DecisionTree(BaseModel):
             if gain[k] > best_gain:
                 best_gain = float(gain[k])
                 best_feat = int(feat)
+
                 best_thr = float((x_sorted[k] + x_sorted[k + 1]) / 2.0)
 
         return best_feat, best_thr, best_gain

@@ -1,7 +1,12 @@
 import numpy as np
 
-from f1pred.models import DecisionTree, LogisticRegression, RandomForest
-
+from f1pred.models import (
+    DecisionTree,
+    LogisticRegression,
+    RandomForest,
+    RandomPredictor,
+    build_model,
+)
 
 def test_logreg_separable():
     rng = np.random.default_rng(0)
@@ -9,10 +14,11 @@ def test_logreg_separable():
     y = (X[:, 0] + 0.5 * X[:, 1] - 0.2 > 0).astype(int)
     model = LogisticRegression(lr=0.3, n_iters=3000).fit(X, y)
     assert (model.predict(X) == y).mean() > 0.95
+
     p = model.predict_proba(X)
     assert p.min() >= 0.0 and p.max() <= 1.0
-    assert np.argmax(model.feature_importances_) == 0
 
+    assert np.argmax(model.feature_importances_) == 0
 
 def test_decision_tree_learns_and_rule():
     rng = np.random.default_rng(1)
@@ -20,8 +26,8 @@ def test_decision_tree_learns_and_rule():
     y = ((X[:, 0] > 0) & (X[:, 1] > 0)).astype(int)
     tree = DecisionTree(max_depth=5, min_samples_leaf=5).fit(X, y)
     assert (tree.predict(X) == y).mean() > 0.97
-    assert tree.feature_importances_[3] < 0.05
 
+    assert tree.feature_importances_[3] < 0.05
 
 def test_random_forest_beats_or_matches_tree_on_noise():
     rng = np.random.default_rng(2)
@@ -36,6 +42,22 @@ def test_random_forest_beats_or_matches_tree_on_noise():
     assert acc_forest >= acc_tree - 0.02
     assert forest.oob_score_ is not None and forest.oob_score_ > 0.6
 
+def test_random_predictor_baseline():
+    rng = np.random.default_rng(3)
+    X = rng.normal(size=(200, 5))
+    y = (rng.random(200) < 0.15).astype(int)
+
+    model = RandomPredictor(random_state=42).fit(X, y)
+    p = model.predict_proba(X)
+    assert p.shape == (200,)
+    assert p.min() >= 0.0 and p.max() <= 1.0
+
+    assert model.feature_importances_ is None
+
+    p2 = RandomPredictor(random_state=42).fit(X, y).predict_proba(X)
+    assert np.allclose(p, p2)
+
+    assert isinstance(build_model("random"), RandomPredictor)
 
 def test_entropy_criterion_pure_split():
     X = np.array([[0.0], [0.1], [0.2], [1.0], [1.1], [1.2]])

@@ -12,10 +12,8 @@ from . import metrics
 
 _METRICS = ("accuracy", "podium_hit_rate", "exact_podium_set", "winner_acc")
 
-
 @dataclass
 class RollingResult:
-
     model_key: str
     per_season: pd.DataFrame
     y_true_all: np.ndarray = field(default_factory=lambda: np.array([]))
@@ -34,9 +32,8 @@ class RollingResult:
             out["overall_f1"] = metrics.f1(self.y_true_all, self.y_pred_all)
         return out
 
-
-def _eval_on(model, season_df: pd.DataFrame) -> tuple[dict, np.ndarray, np.ndarray, np.ndarray]:
-    X, y_true, _ = feature_matrix(season_df)
+def _eval_on(model, season_df: pd.DataFrame, columns=None) -> tuple[dict, np.ndarray, np.ndarray, np.ndarray]:
+    X, y_true, _ = feature_matrix(season_df, columns=columns)
     proba = np.asarray(model.predict_proba(X), dtype=float)
     y_pred = (proba >= 0.5).astype(int)
     pod = metrics.podium_metrics(season_df, proba)
@@ -49,12 +46,12 @@ def _eval_on(model, season_df: pd.DataFrame) -> tuple[dict, np.ndarray, np.ndarr
     }
     return m, y_true, y_pred, proba
 
-
 def rolling_cross_year(
     feats: pd.DataFrame,
     model_key: str,
     seasons=None,
     verbose: bool = True,
+    feature_cols=None,
     **model_overrides,
 ) -> RollingResult:
     seasons = sorted(seasons) if seasons is not None else sorted(feats["season"].unique())
@@ -74,7 +71,7 @@ def rolling_cross_year(
         if train.empty or test.empty:
             continue
 
-        Xtr, ytr, feat_names = feature_matrix(train)
+        Xtr, ytr, feat_names = feature_matrix(train, columns=feature_cols)
 
         model = build_model(model_key, **model_overrides)
         t0 = time.perf_counter()
@@ -82,9 +79,9 @@ def rolling_cross_year(
         fit_seconds = time.perf_counter() - t0
         fit_times.append(fit_seconds)
 
-        test_m, yte, y_pred_test, proba_test = _eval_on(model, test)
+        test_m, yte, y_pred_test, proba_test = _eval_on(model, test, columns=feature_cols)
 
-        val_m = _eval_on(model, val)[0] if not val.empty else {}
+        val_m = _eval_on(model, val, columns=feature_cols)[0] if not val.empty else {}
 
         rec = {
             "season": int(test_season),

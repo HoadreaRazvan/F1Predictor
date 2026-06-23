@@ -1,3 +1,11 @@
+"""Acces de nivel jos la datele FastF1 — strict din cache (offline).
+
+Pentru fiecare rundă încărcăm sesiunea de cursă (``R``) și calificările (``Q``)
+și extragem un rând per pilot cu: grid, poziție finală, status, puncte, echipă,
+plus context (circuit, dată, vreme). Totul vine din cache-ul existent — nicio
+descărcare. Sesiunile lipsă (ex. anulate) sunt sărite cu avertizare.
+"""
+
 from __future__ import annotations
 
 import warnings
@@ -14,6 +22,13 @@ _OFFLINE = None
 
 
 def enable_cache(offline: bool = True) -> None:
+    """Activează cache-ul FastF1 și fixează modul offline.
+
+    ``offline=True`` (implicit): folosește DOAR cache-ul local, fără nicio cerere de
+    rețea — modul normal, reproductibil (evită revalidările care primesc 429 de la
+    API-ul Ergast/Jolpica). ``offline=False``: permite descărcări; folosit O SINGURĂ
+    DATĂ de pasul de îmbogățire (``extras.build_race_extras``).
+    """
     global _CACHE_ENABLED, _OFFLINE
     if _CACHE_ENABLED and _OFFLINE == offline:
         return
@@ -34,12 +49,14 @@ def enable_cache(offline: bool = True) -> None:
 
 
 def _finished_flag(status: str) -> bool:
+    """True dacă pilotul a fost clasat la final (a terminat sau a fost lapped)."""
     if not isinstance(status, str):
         return False
     return status == "Finished" or status.startswith("+")
 
 
 def _weather_summary(session) -> dict:
+    """Rezumat de vreme la nivel de cursă (din weather_data cache-uit)."""
     out = {"rain": np.nan, "track_temp": np.nan, "air_temp": np.nan}
     try:
         w = session.weather_data
@@ -53,6 +70,12 @@ def _weather_summary(session) -> dict:
 
 
 def _quali_info(year: int, rnd: int) -> dict:
+    """Mapă DriverId -> {"pos": poziție, "best": cel mai bun timp (s)} din sesiunea Q.
+
+    Timpul cel mai bun e minimul dintre Q1/Q2/Q3 prezente (în secunde); ``nan`` dacă
+    pilotul nu are niciun tur cronometrat. {} dacă sesiunea lipsește din cache.
+    Datele Q1/Q2/Q3 vin din rezultatele Ergast deja cache-uite (fără descărcare).
+    """
     import fastf1
 
     try:
@@ -81,12 +104,13 @@ def _quali_info(year: int, rnd: int) -> dict:
 
 
 def load_round(year: int, rnd: int, event) -> pd.DataFrame | None:
+    """Încarcă o rundă -> DataFrame cu un rând per pilot, sau None dacă indisponibil."""
     import fastf1
 
     try:
         race = fastf1.get_session(year, rnd, "R")
         race.load(laps=False, telemetry=False, weather=True, messages=False)
-    except Exception as exc:
+    except Exception as exc:  # sesiune lipsă din cache / anulată
         print(f"  [skip] {year} runda {rnd}: {exc}")
         return None
 
@@ -132,6 +156,7 @@ def load_round(year: int, rnd: int, event) -> pd.DataFrame | None:
 
 
 def load_season(year: int) -> pd.DataFrame:
+    """Încarcă toate rundele unui sezon -> DataFrame concatenat."""
     import fastf1
 
     enable_cache()
@@ -159,6 +184,7 @@ def load_season(year: int) -> pd.DataFrame:
 
 
 def load_all(seasons=None) -> pd.DataFrame:
+    """Încarcă toate sezoanele cerute (implicit cele din config)."""
     seasons = list(seasons) if seasons is not None else list(config.SEASONS)
     enable_cache()
     frames = []

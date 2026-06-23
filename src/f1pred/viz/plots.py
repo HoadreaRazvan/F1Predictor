@@ -8,7 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-_COLORS = {"logreg": "#1f77b4", "tree": "#2ca02c", "forest": "#d62728"}
+_COLORS = {"logreg": "#1f77b4", "tree": "#2ca02c", "forest": "#d62728", "random": "#7f7f7f"}
 
 _METRIC_LABELS = {
     "accuracy": "Acuratețe",
@@ -17,10 +17,8 @@ _METRIC_LABELS = {
     "winner_acc": "Câștigător (Top-1)",
 }
 
-
 def metric_label(metric: str) -> str:
     return _METRIC_LABELS.get(metric, metric)
-
 
 def plot_metric_per_season(per_season_by_model: dict, metric: str, path: Path, title: str | None = None) -> Path:
     models = list(per_season_by_model.keys())
@@ -45,7 +43,6 @@ def plot_metric_per_season(per_season_by_model: dict, metric: str, path: Path, t
     fig.savefig(path, dpi=120)
     plt.close(fig)
     return path
-
 
 def plot_metric_summary(summary, metrics_list, path: Path, title: str | None = None) -> Path:
     models = summary["model"].tolist()
@@ -72,7 +69,6 @@ def plot_metric_summary(summary, metrics_list, path: Path, title: str | None = N
     plt.close(fig)
     return path
 
-
 def plot_feature_importance(names, importances, model_key: str, path: Path, top: int = 15) -> Path:
     imp = np.asarray(importances, dtype=float)
     order = np.argsort(imp)[::-1][:top]
@@ -88,7 +84,6 @@ def plot_feature_importance(names, importances, model_key: str, path: Path, top:
     plt.close(fig)
     return path
 
-
 def plot_tuning_configs(df, model_key: str, metric: str, path: Path) -> Path:
     d = df.sort_values(f"val_{metric}", ascending=False).reset_index(drop=True)
     x = np.arange(1, len(d) + 1)
@@ -98,6 +93,7 @@ def plot_tuning_configs(df, model_key: str, metric: str, path: Path) -> Path:
     fig, ax = plt.subplots(figsize=(11, 5))
     ax.plot(x, d[f"val_{metric}"].to_numpy(), "-o", ms=3, color=color, label=f"validare ({label})")
     ax.plot(x, d[f"test_{metric}"].to_numpy(), "--s", ms=3, color="#999", label=f"test ({label})")
+
     ax.scatter([1], [d[f"val_{metric}"].iloc[0]], s=160, marker="*", color="#d62728",
                zorder=5, label="cea mai bună (validare)")
     if "is_default" in d.columns and d["is_default"].any():
@@ -115,13 +111,13 @@ def plot_tuning_configs(df, model_key: str, metric: str, path: Path) -> Path:
     plt.close(fig)
     return path
 
-
 def plot_tuning_curves(df, model_key: str, metric: str, hyperparams, path: Path) -> Path:
     label = metric_label(metric)
     color = _COLORS.get(model_key, "#555")
     hyperparams = list(hyperparams)
     ncol = min(len(hyperparams), 4)
     nrow = int(np.ceil(len(hyperparams) / ncol))
+
     fig, axes = plt.subplots(nrow, ncol, figsize=(3.7 * ncol, 3.4 * nrow),
                              squeeze=False, sharey=True)
 
@@ -156,10 +152,8 @@ def plot_tuning_curves(df, model_key: str, metric: str, hyperparams, path: Path)
     plt.close(fig)
     return path
 
-
-_MODEL_ORDER = ("logreg", "tree", "forest")
+_MODEL_ORDER = ("logreg", "tree", "forest", "random")
 _REGIM_STYLE = {"cu": "-", "fara": "--"}
-
 
 def plot_insezon_comparison(df, metric: str, season: int, path: Path) -> Path:
     label = metric_label(metric)
@@ -180,6 +174,102 @@ def plot_insezon_comparison(df, metric: str, season: int, path: Path) -> Path:
     ax.set_ylim(0, 1)
     ax.set_title(f"{label} — efectul curselor in-sezon ({season})")
     ax.legend(loc="lower right", fontsize=8, ncol=len(models))
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+def plot_summary_with_ci(summary, metrics_list, lo, hi, path: Path, title: str | None = None) -> Path:
+    models = summary["model"].tolist()
+    x = np.arange(len(metrics_list))
+    width = 0.8 / max(len(models), 1)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for i, m in enumerate(models):
+        vals = np.array([float(summary[summary["model"] == m].iloc[0][mt]) for mt in metrics_list])
+        lows = np.array([float(lo[lo["model"] == m].iloc[0][mt]) for mt in metrics_list])
+        highs = np.array([float(hi[hi["model"] == m].iloc[0][mt]) for mt in metrics_list])
+        yerr = np.clip(np.vstack([vals - lows, highs - vals]), 0, None)
+        ax.bar(x + i * width, vals, width, label=m, color=_COLORS.get(m),
+               yerr=yerr, capsize=3, error_kw={"elinewidth": 0.8})
+    ax.set_xticks(x + width * (len(models) - 1) / 2)
+    ax.set_xticklabels([metric_label(mt) for mt in metrics_list])
+    ax.set_ylabel("Scor (medie pe sezoane-test, IC 95%)")
+    ax.set_ylim(0, 1)
+    ax.set_title(title or "Performanța modelelor cu intervale de încredere 95%")
+    ax.legend()
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+def plot_reliability_diagram(series, path: Path, title: str | None = None) -> Path:
+    fig, ax = plt.subplots(figsize=(6.4, 6))
+    ax.plot([0, 1], [0, 1], "--", color="#999", label="calibrare perfectă")
+    for label, conf, acc in series:
+        conf = np.asarray(conf, dtype=float)
+        acc = np.asarray(acc, dtype=float)
+        ok = ~np.isnan(acc)
+        ax.plot(conf[ok], acc[ok], "-o", ms=4, label=label)
+    ax.set_xlabel("Încredere medie (probabilitate prezisă)")
+    ax.set_ylabel("Frecvență observată (rată de podium)")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_title(title or "Diagrama de fiabilitate")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+def _roc_points(y_true, proba):
+    y = np.asarray(y_true, dtype=int)
+    order = np.argsort(np.asarray(proba, dtype=float), kind="mergesort")[::-1]
+    y = y[order]
+    tp = np.cumsum(y)
+    fp = np.cumsum(1 - y)
+    P = max(int(y.sum()), 1)
+    N = max(int((1 - y).sum()), 1)
+    return np.concatenate(([0.0], fp / N)), np.concatenate(([0.0], tp / P))
+
+def _pr_points(y_true, proba):
+    y = np.asarray(y_true, dtype=int)
+    order = np.argsort(np.asarray(proba, dtype=float), kind="mergesort")[::-1]
+    y = y[order]
+    tp = np.cumsum(y)
+    fp = np.cumsum(1 - y)
+    P = max(int(y.sum()), 1)
+    return tp / P, tp / np.maximum(tp + fp, 1)
+
+def plot_roc_curve(series, path: Path, title: str | None = None) -> Path:
+    fig, ax = plt.subplots(figsize=(6.4, 6))
+    ax.plot([0, 1], [0, 1], "--", color="#999", label="șansă")
+    for label, y_true, proba in series:
+        fpr, tpr = _roc_points(y_true, proba)
+        ax.plot(fpr, tpr, label=label, color=_COLORS.get(label))
+    ax.set_xlabel("Rată fals pozitive")
+    ax.set_ylabel("Rată adevărat pozitive")
+    ax.set_title(title or "Curba ROC")
+    ax.legend(loc="lower right")
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+def plot_pr_curve(series, path: Path, title: str | None = None) -> Path:
+    fig, ax = plt.subplots(figsize=(6.4, 6))
+    for label, y_true, proba in series:
+        rec, prec = _pr_points(y_true, proba)
+        ax.plot(rec, prec, label=label, color=_COLORS.get(label))
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precizie")
+    ax.set_ylim(0, 1)
+    ax.set_title(title or "Curba precizie–recall")
+    ax.legend(loc="upper right")
     ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(path, dpi=120)

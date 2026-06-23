@@ -4,7 +4,6 @@ import numpy as np
 
 from .base import BaseModel, Standardizer
 
-
 def _sigmoid(z: np.ndarray) -> np.ndarray:
     out = np.empty_like(z, dtype=float)
     pos = z >= 0
@@ -13,9 +12,7 @@ def _sigmoid(z: np.ndarray) -> np.ndarray:
     out[~pos] = ez / (1.0 + ez)
     return out
 
-
 class LogisticRegression(BaseModel):
-
     name = "logreg"
 
     def __init__(

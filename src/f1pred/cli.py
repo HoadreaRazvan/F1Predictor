@@ -23,8 +23,8 @@ MODEL_NAMES = {
     "logreg": "Regresie Logistică",
     "tree": "Arbore de Decizie",
     "forest": "Random Forest",
+    "random": "Predictor aleator",
 }
-
 
 def _resolve_models(model_arg: str) -> list[str]:
     if model_arg == "all":
@@ -32,7 +32,6 @@ def _resolve_models(model_arg: str) -> list[str]:
     if model_arg not in MODEL_KEYS:
         raise SystemExit(f"Model necunoscut: {model_arg}. Alege din {MODEL_KEYS} sau 'all'.")
     return [model_arg]
-
 
 def _fit_before(feats: pd.DataFrame, key: str, season: int, upto_round: int | None = None):
     mask = feats["season"] < season
@@ -46,7 +45,6 @@ def _fit_before(feats: pd.DataFrame, key: str, season: int, upto_round: int | No
     model.fit(X, y)
     return model, len(train)
 
-
 def cmd_fetch_extras(args) -> None:
     from .data import extras
 
@@ -54,14 +52,12 @@ def cmd_fetch_extras(args) -> None:
     print(f"\nÎmbogățiri gata: {len(df)} rânduri -> {config.RACE_EXTRAS_PATH}")
     print("Rulează apoi: python main.py build-data")
 
-
 def cmd_build_data(args) -> None:
     config.ensure_dirs()
     feats = get_feature_dataset(force=True)
     print(f"\nDataset gata: {len(feats)} rânduri, {len(FEATURE_COLUMNS)} feature-uri")
     print(feats.groupby("season")["round"].nunique().to_string())
     print(f"Rată podium: {feats['is_podium'].mean():.3f}")
-
 
 def cmd_train(args) -> None:
     config.ensure_dirs()
@@ -89,14 +85,12 @@ def cmd_train(args) -> None:
             top = sorted(zip(names, fi), key=lambda t: t[1], reverse=True)[:8]
             print("  top feature-uri:", ", ".join(f"{n}={v:.3f}" for n, v in top))
 
-
 _METRIC_PLOT_FILE = {
     "accuracy": "accuracy.png",
     "podium_hit_rate": "podium_hit_rate.png",
     "exact_podium_set": "exact_podium.png",
     "winner_acc": "winner_acc.png",
 }
-
 
 def cmd_evaluate(args) -> None:
     config.ensure_dirs()
@@ -117,7 +111,23 @@ def cmd_evaluate(args) -> None:
     summary = pd.DataFrame(summary_rows).round(3)
     print(summary.to_string(index=False))
 
+    prob_rows = []
+    for key, res in results.items():
+        yt, pp = res.y_true_all, res.y_proba_all
+        prob_rows.append({
+            "model": key,
+            "log_loss": metrics.log_loss(yt, pp),
+            "brier": metrics.brier_score(yt, pp),
+            "roc_auc": metrics.roc_auc(yt, pp),
+            "pr_auc": metrics.pr_auc(yt, pp),
+            "ece": metrics.expected_calibration_error(yt, pp),
+        })
+    prob = pd.DataFrame(prob_rows).round(3)
+    print("\n--------- Metrici probabilistice (probabilități cumulate pe test) ---------")
+    print(prob.to_string(index=False))
+
     summary.to_csv(config.OUTPUT_DIR / "evaluation_summary.csv", index=False)
+    prob.to_csv(config.OUTPUT_DIR / "evaluation_prob_metrics.csv", index=False)
     for key, res in results.items():
         res.per_season.to_csv(config.OUTPUT_DIR / f"eval_{key}_per_season.csv", index=False)
     print(f"\nCSV-uri salvate în {config.OUTPUT_DIR}")
@@ -126,9 +136,16 @@ def cmd_evaluate(args) -> None:
         from .viz import plots
 
         per_season_by_model = {k: r.per_season for k, r in results.items()}
+
         for m in eval_metrics:
             plots.plot_metric_per_season(per_season_by_model, m, config.PLOTS_DIR / _METRIC_PLOT_FILE[m])
+
         plots.plot_metric_summary(summary, eval_metrics, config.PLOTS_DIR / "metric_summary.png")
+
+        roc_series = [(k, r.y_true_all, r.y_proba_all) for k, r in results.items()]
+        plots.plot_roc_curve(roc_series, config.PLOTS_DIR / "roc_curve.png")
+        plots.plot_pr_curve(roc_series, config.PLOTS_DIR / "pr_curve.png")
+
         for key, res in results.items():
             if res.feature_importances is not None:
                 plots.plot_feature_importance(
@@ -136,7 +153,6 @@ def cmd_evaluate(args) -> None:
                     config.PLOTS_DIR / f"feature_importance_{key}.png",
                 )
         print(f"Grafice salvate în {config.PLOTS_DIR}")
-
 
 def cmd_tune(args) -> None:
     config.ensure_dirs()
@@ -152,7 +168,6 @@ def cmd_tune(args) -> None:
         print(f"  {MODEL_NAMES[key]:20s}: {best[key]}")
     print("\nNotă: hiperparametrii din config.py NU au fost modificați. Tabelele complete "
           "(toate configurațiile) sunt în outputs/tuning_<model>.csv.")
-
 
 def cmd_predict_race(args) -> None:
     config.ensure_dirs()
@@ -189,7 +204,6 @@ def cmd_predict_race(args) -> None:
     ranked.to_csv(out, index=False)
     print(f"\nSalvat: {out}")
 
-
 def cmd_predict_season(args) -> None:
     config.ensure_dirs()
     feats = get_feature_dataset()
@@ -198,6 +212,7 @@ def cmd_predict_season(args) -> None:
         raise SystemExit(f"Nu există date pentru sezonul {args.season}.")
 
     key = _resolve_models(args.model)[0]
+
     model, n_train = _fit_before(feats, key, args.season - 1)
     proba = predict_proba_for_races(model, season_df)
 
@@ -248,7 +263,6 @@ def cmd_predict_season(args) -> None:
     race_tbl.to_csv(config.PREDICTIONS_DIR / f"podiums_{args.season}_{key}.csv", index=False)
     print(f"\nCSV-uri salvate în {config.PREDICTIONS_DIR}")
 
-
 def _race_metrics(model, race) -> dict:
     proba = predict_proba_for_races(model, race)
     _, y, _ = feature_matrix(race)
@@ -260,7 +274,6 @@ def _race_metrics(model, race) -> dict:
         "exact_podium_set": pod["exact_podium_set"],
         "winner_acc": pod["winner_acc"],
     }
-
 
 def cmd_insezon(args) -> None:
     config.ensure_dirs()
@@ -310,6 +323,146 @@ def cmd_insezon(args) -> None:
             )
         print(f"Grafice salvate în {config.PLOTS_DIR}")
 
+def cmd_ablatie(args) -> None:
+    config.ensure_dirs()
+    feats = get_feature_dataset()
+    eval_metrics = list(config.EVAL_METRICS)
+    keys = _resolve_models(args.model)
+
+    probe_train = feats[feats["season"] <= config.LAST_SEASON - 1]
+
+    rows = []
+    for key in keys:
+        X, y, names = feature_matrix(probe_train)
+        probe = build_model(key)
+        probe.fit(X, y)
+        fi = probe.feature_importances_
+        if fi is None:
+            print(f"\n[{key}] nu expune importanța caracteristicilor — sărit.")
+            continue
+        top = names[int(np.argmax(fi))]
+
+        print(f"\n=== {MODEL_NAMES[key]}: ablație — elimin '{top}' ===")
+
+        full = rolling_cross_year(feats, key, verbose=False).overall()
+        cols = [c for c in FEATURE_COLUMNS if c != top]
+        ablat = rolling_cross_year(feats, key, verbose=False, feature_cols=cols).overall()
+
+        for regim, ov in (("complet", full), (f"fără {top}", ablat)):
+            rows.append({"model": key, "regim": regim, "caracteristica_eliminata": top,
+                         **{m: ov[f"mean_{m}"] for m in eval_metrics}})
+
+        print(f"  {'metrică':18s} {'complet':>9s} {'fără top':>9s} {'Δ':>8s}")
+        for m in eval_metrics:
+            f, a = full[f"mean_{m}"], ablat[f"mean_{m}"]
+            print(f"  {m:18s} {f:9.3f} {a:9.3f} {a - f:+8.3f}")
+
+    if not rows:
+        raise SystemExit("Niciun model cu importanță de caracteristici (ex. doar 'random').")
+
+    df = pd.DataFrame(rows)
+    out_csv = config.OUTPUT_DIR / "ablation.csv"
+    df.to_csv(out_csv, index=False)
+    print(f"\nCSV salvat în {out_csv}")
+
+    if not args.no_plots:
+        from .viz import plots
+
+        for key in df["model"].unique():
+            sub = df[df["model"] == key]
+            top = sub["caracteristica_eliminata"].iloc[0]
+            summary = sub[["regim", *eval_metrics]].rename(columns={"regim": "model"})
+            plots.plot_metric_summary(
+                summary, eval_metrics, config.PLOTS_DIR / f"ablation_{key}.png",
+                title=f"Ablație {MODEL_NAMES[key]} — fără {top}",
+            )
+        print(f"Grafice salvate în {config.PLOTS_DIR}")
+
+_CALIB_LABELS = {"raw": "brut", "platt": "Platt", "iso": "izotonică"}
+
+def cmd_calibrare(args) -> None:
+    config.ensure_dirs()
+    feats = get_feature_dataset()
+    keys = [k for k in _resolve_models(args.model) if k != "random"]
+    from .evaluation import calibration
+
+    rows = []
+    for key in keys:
+        print(f"\n=== {MODEL_NAMES[key]}: calibrare (Platt & izotonică) ===")
+        out = calibration.calibration_experiment(feats, key)
+        y = out["y"]
+        variants = (("raw", out["raw"]), ("platt", out["platt"]), ("iso", out["iso"]))
+
+        print(f"  {'variantă':12s} {'Brier':>8s} {'log-loss':>9s} {'ECE':>7s}")
+        for name, p in variants:
+            b, ll, e = (metrics.brier_score(y, p), metrics.log_loss(y, p),
+                        metrics.expected_calibration_error(y, p))
+            rows.append({"model": key, "varianta": name, "brier": b, "log_loss": ll, "ece": e})
+            print(f"  {_CALIB_LABELS[name]:12s} {b:8.3f} {ll:9.3f} {e:7.3f}")
+
+        if not args.no_plots:
+            from .viz import plots
+
+            series = []
+            for name, p in variants:
+                conf, acc, _ = metrics.reliability_curve(y, p)
+                series.append((_CALIB_LABELS[name], conf, acc))
+            plots.plot_reliability_diagram(series, config.PLOTS_DIR / f"calibration_{key}.png",
+                                           title=f"Calibrare — {MODEL_NAMES[key]}")
+
+    if not rows:
+        raise SystemExit("Niciun model de calibrat (predictorul aleator e exclus).")
+    pd.DataFrame(rows).to_csv(config.OUTPUT_DIR / "calibration.csv", index=False)
+    print(f"\nCSV salvat în {config.OUTPUT_DIR / 'calibration.csv'}")
+    if not args.no_plots:
+        print(f"Grafice salvate în {config.PLOTS_DIR}")
+
+def cmd_semnificatie(args) -> None:
+    config.ensure_dirs()
+    feats = get_feature_dataset()
+    eval_metrics = list(config.EVAL_METRICS)
+    keys = _resolve_models(args.model)
+    from .evaluation import stats
+
+    per_season = {key: rolling_cross_year(feats, key, verbose=False).per_season for key in keys}
+
+    mean_rows, lo_rows, hi_rows = [], [], []
+    for key in keys:
+        ps = per_season[key]
+        mrow, lrow, hrow = {"model": key}, {"model": key}, {"model": key}
+        for m in eval_metrics:
+            mrow[m], lrow[m], hrow[m] = stats.bootstrap_ci(ps[m].to_numpy())
+        mean_rows.append(mrow); lo_rows.append(lrow); hi_rows.append(hrow)
+    summary, lo, hi = pd.DataFrame(mean_rows), pd.DataFrame(lo_rows), pd.DataFrame(hi_rows)
+
+    print("\n========= Medii cu intervale de încredere 95% (bootstrap pe sezoane) =========")
+    for key in keys:
+        s, l, h = (summary[summary.model == key].iloc[0], lo[lo.model == key].iloc[0],
+                   hi[hi.model == key].iloc[0])
+        print(f"  [{key:6s}] " + "  ".join(f"{m}={s[m]:.3f} [{l[m]:.3f}, {h[m]:.3f}]" for m in eval_metrics))
+
+    primary = config.TUNE_METRIC
+    print(f"\n--- Test pereche (permutare) pe '{primary}': p-value bilateral ---")
+    pair_rows = []
+    for a in keys:
+        for b in keys:
+            if a < b:
+                p = stats.paired_permutation_test(per_season[a][primary].to_numpy(),
+                                                  per_season[b][primary].to_numpy())
+                pair_rows.append({"model_a": a, "model_b": b, "metric": primary, "p_value": p})
+                flag = "  (semnificativ la 0,05)" if p < 0.05 else ""
+                print(f"  {a:6s} vs {b:6s}: p = {p:.3f}{flag}")
+
+    summary.round(3).to_csv(config.OUTPUT_DIR / "significance_means_ci.csv", index=False)
+    pd.DataFrame(pair_rows).to_csv(config.OUTPUT_DIR / "significance.csv", index=False)
+    print(f"\nCSV-uri salvate în {config.OUTPUT_DIR}")
+
+    if not args.no_plots:
+        from .viz import plots
+
+        plots.plot_summary_with_ci(summary, eval_metrics, lo, hi,
+                                   config.PLOTS_DIR / "metric_summary_ci.png")
+        print(f"Grafic salvat în {config.PLOTS_DIR / 'metric_summary_ci.png'}")
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="f1pred", description="Predicție podium F1 cu 3 modele ML de la zero.")
@@ -324,17 +477,17 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("build-data", help="Construiește datasetul din cache-ul FastF1").set_defaults(func=cmd_build_data)
 
     pt = sub.add_parser("train", help="Antrenează și salvează un model")
-    pt.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    pt.add_argument("--model", default="all", help="logreg | tree | forest | random | all")
     pt.add_argument("--train-until", type=int, default=config.LAST_SEASON - 1, help="ultimul sezon de antrenament")
     pt.set_defaults(func=cmd_train)
 
     pe = sub.add_parser("evaluate", help="Validare temporală train/validare/test pe ani + grafice")
-    pe.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    pe.add_argument("--model", default="all", help="logreg | tree | forest | random | all")
     pe.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
     pe.set_defaults(func=cmd_evaluate)
 
     ptn = sub.add_parser("tune", help="Optimizează hiperparametrii (grid search pe validare) + grafice")
-    ptn.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    ptn.add_argument("--model", default="all", help="logreg | tree | forest | random | all")
     ptn.add_argument("--metric", default=config.TUNE_METRIC,
                      help="metrica de selecție pe validare "
                           "(accuracy | podium_hit_rate | exact_podium_set | winner_acc)")
@@ -344,21 +497,38 @@ def build_parser() -> argparse.ArgumentParser:
     pr = sub.add_parser("predict-race", help="Podiumul prezis al unei curse")
     pr.add_argument("--season", type=int, required=True)
     pr.add_argument("--round", type=int, required=True)
-    pr.add_argument("--model", default="forest", help="logreg | tree | forest")
+    pr.add_argument("--model", default="forest", help="logreg | tree | forest | random")
     pr.set_defaults(func=cmd_predict_race)
 
     ps = sub.add_parser("predict-season", help="Podium per cursă + clasament campionat prezis")
     ps.add_argument("--season", type=int, required=True)
-    ps.add_argument("--model", default="forest", help="logreg | tree | forest")
+    ps.add_argument("--model", default="forest", help="logreg | tree | forest | random")
     ps.set_defaults(func=cmd_predict_season)
 
     pi = sub.add_parser("insezon", help="Compară performanța cu vs fără cursele in-sezon + grafice")
     pi.add_argument("--season", type=int, default=config.LAST_SEASON, help="sezonul analizat (implicit ultimul)")
-    pi.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    pi.add_argument("--model", default="all", help="logreg | tree | forest | random | all")
     pi.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
     pi.set_defaults(func=cmd_insezon)
-    return p
 
+    pa = sub.add_parser("ablatie",
+                        help="Studiu de ablație: elimină cea mai importantă caracteristică per model + comparație")
+    pa.add_argument("--model", default="all", help="logreg | tree | forest | random | all")
+    pa.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
+    pa.set_defaults(func=cmd_ablatie)
+
+    pc = sub.add_parser("calibrare",
+                        help="Calibrarea probabilităților (Platt & izotonică) + diagrame de fiabilitate")
+    pc.add_argument("--model", default="all", help="logreg | tree | forest | all")
+    pc.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
+    pc.set_defaults(func=cmd_calibrare)
+
+    psig = sub.add_parser("semnificatie",
+                          help="Intervale de încredere + test de semnificație pereche între modele")
+    psig.add_argument("--model", default="all", help="logreg | tree | forest | random | all")
+    psig.add_argument("--no-plots", action="store_true", help="nu genera grafice PNG")
+    psig.set_defaults(func=cmd_semnificatie)
+    return p
 
 def main(argv=None) -> None:
     for stream in ("stdout", "stderr"):
@@ -369,7 +539,6 @@ def main(argv=None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     args.func(args)
-
 
 if __name__ == "__main__":
     main()

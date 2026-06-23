@@ -34,6 +34,8 @@ FOREST_PARAMS = dict(
     max_features="log2",
 )
 
+RANDOM_PARAMS = dict()
+
 RANDOM_SEED = 42
 
 TUNE_METRIC = "podium_hit_rate"
@@ -56,12 +58,13 @@ FOREST_GRID = dict(
     max_features=["sqrt", "log2"],
 )
 
-GRIDS = {"logreg": LOGREG_GRID, "tree": TREE_GRID, "forest": FOREST_GRID}
+RANDOM_GRID = dict()
 
-MODEL_KEYS = ("logreg", "tree", "forest")
+GRIDS = {"logreg": LOGREG_GRID, "tree": TREE_GRID, "forest": FOREST_GRID, "random": RANDOM_GRID}
+
+MODEL_KEYS = ("logreg", "tree", "forest", "random")
 
 EVAL_METRICS = ("accuracy", "podium_hit_rate", "exact_podium_set", "winner_acc")
-
 
 def ensure_dirs() -> None:
     for d in (OUTPUT_DIR, MODELS_DIR, PLOTS_DIR, PREDICTIONS_DIR):

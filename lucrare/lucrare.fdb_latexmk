@@ -1,25 +1,31 @@
 # Fdb version 4
-["biber lucrare"] 1780835841.67282 "lucrare.bcf" "lucrare.bbl" "lucrare" 1780845670.69849 0
-  "lucrare.bcf" 1780845669.39004 113464 d7e7d724a244540a36409edc003fcab3 "xelatex"
+["biber lucrare"] 1780835841.67282 "lucrare.bcf" "lucrare.bbl" "lucrare" 1781705944.4467 0
+  "lucrare.bcf" 1781705942.65814 113464 d7e7d724a244540a36409edc003fcab3 "xelatex"
   "referinte.bib" 1780765061.16859 9247 920b451d1be3dc4f91d5b199bee9f3ff ""
   (generated)
   "lucrare.bbl"
   "lucrare.blg"
   (rewritten before read)
-["xdvipdfmx"] 1780845669.63167 "lucrare.xdv" "lucrare.pdf" "lucrare" 1780845670.7461 0
-  "lucrare.xdv" 1780845669.39281 1528864 c9d84ccde53a6b7a24a4beadff898682 "xelatex"
+["xdvipdfmx"] 1781705942.95419 "lucrare.xdv" "lucrare.pdf" "lucrare" 1781705944.47554 0
+  "lucrare.xdv" 1781705942.66013 1742308 359d7e8c1e4cd069d00941fd7164809d "xelatex"
   (generated)
   "lucrare.pdf"
   (rewritten before read)
-["xelatex"] 1780845666.86827 "lucrare.tex" "lucrare.xdv" "lucrare" 1780845670.69934 0
-  "../outputs/plots/accuracy.png" 1780841752.28902 24408 332ddf49e233c30dc34fad968fa167dd ""
-  "../outputs/plots/feature_importance_forest.png" 1780841752.80669 47087 bbd6f1e7e48a89a87ee7cc1de50af683 ""
+["xelatex"] 1781705939.92675 "lucrare.tex" "lucrare.xdv" "lucrare" 1781705944.44719 0
+  "../outputs/plots/accuracy.png" 1781705647.53354 25867 f80a62859b527420ed68ae3afaced871 ""
+  "../outputs/plots/calibration_logreg.png" 1781705667.68195 77693 6b209a2c750ca82b9093e21a83518c8d ""
+  "../outputs/plots/feature_importance_forest.png" 1781705648.39561 47087 bbd6f1e7e48a89a87ee7cc1de50af683 ""
+  "../outputs/plots/feature_importance_logreg.png" 1781705648.19309 48017 09c3ee569394f1a69812d85a5c1711e4 ""
+  "../outputs/plots/feature_importance_tree.png" 1781705648.28557 51542 7895cb56267e3f4c2a40efb31e58fa6e ""
   "../outputs/plots/insezon_2025_accuracy.png" 1780841876.79786 56464 1fc9c882468d6bb12de71b0890850be7 ""
   "../outputs/plots/insezon_2025_exact_podium.png" 1780841876.95871 71800 9c0e938375562ca1497fc686a051ff9a ""
   "../outputs/plots/insezon_2025_podium_hit_rate.png" 1780841876.87774 63628 aad09d2a624501ddf8f44a2b9df03794 ""
   "../outputs/plots/insezon_2025_winner_acc.png" 1780841877.04357 103368 d6e238a8002fbdd36ac154b657622203 ""
-  "../outputs/plots/metric_summary.png" 1780841752.55695 38266 efed5f52a17fcb28c57e17ad922f088e ""
-  "../outputs/plots/podium_hit_rate.png" 1780841752.35438 26714 761cf78c6fe4e595862b585b2009b107 ""
+  "../outputs/plots/metric_summary.png" 1781705647.92636 40690 7129e3d221279f9979981cf89a706834 ""
+  "../outputs/plots/metric_summary_ci.png" 1781705697.35102 36798 c367685e9d25706204ba3dcdab985fd2 ""
+  "../outputs/plots/podium_hit_rate.png" 1781705647.6387 27997 4bacfa4f6865408b0f23b398ded76056 ""
+  "../outputs/plots/pr_curve.png" 1781705648.07944 67293 635ed78dec5abcf9556dee96ab298d0f ""
+  "../outputs/plots/roc_curve.png" 1781705648.00432 57982 d22272a885209391f82d07c7d6351c95 ""
   "../outputs/plots/tuning_forest_configs.png" 1780841203.08257 55974 b0a9593317b92765518dbc0dd75cfff0 ""
   "../outputs/plots/tuning_forest_curves.png" 1780841203.23528 67001 edad9cbcc3c6806549469bcf25235f71 ""
   "C:/Users/hoadr/AppData/Local/MiKTeX/miktex/data/le/xetex/xelatex.fmt" 1780656821.58114 27199888 dd13fc98d1c149d07ab0fea6cfdce197 ""
@@ -27,8 +33,10 @@
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1233951848 1004 54797486969f23fa377b128694d548df ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1233951848 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1233951854 916 f87d7c45f9c908e672703b83b72241a3 ""
+  "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msam5.tfm" 1233951854 924 9904cf1d39e9767e7a3622f2a125a565 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msam7.tfm" 1233951854 928 2dc8d444221b7a635bb58038579b861a ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msbm10.tfm" 1233951854 908 2921f8a10601f252058503cc6570e581 ""
+  "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msbm5.tfm" 1233951854 940 75ac932a52f80982a9f8ea75d03a34cf ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msbm7.tfm" 1233951854 940 228d6584342e91276bf566bcf9716b83 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmex10.tfm" 1136765053 992 662f679a0b3d2d53c1b94050fdaa3f50 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmmi10.tfm" 1136765053 1528 abec98dbc43e172678c11b3b9031252a ""
@@ -201,15 +209,16 @@
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/refcount/refcount.sty" 1576433952 9878 9e94e8fa600d95f9c7731bb21dfb67a4 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/rerunfilecheck/rerunfilecheck.sty" 1751104012 9684 a33a14b82ce60d6e77cb9be689d79ee6 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/setspace/setspace.sty" 1670403145 22490 8cac309b79a4c53a4ffce4b1b07aead0 ""
+  "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/titlesec/titlesec.sty" 1736608268 48766 87a17a4ef312a39cd43896e34a679a56 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/tools/array.sty" 1761901070 15651 9d7c62df82cb29a555c00550babfe364 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/hoadr/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "lucrare.aux" 1780845669.36091 38262 38708828d826acb9db6a4ca885f440e2 "xelatex"
-  "lucrare.bbl" 1780844603.60338 47208 bff8fc4a3e939cd260de12b2de106284 "biber lucrare"
-  "lucrare.out" 1780845669.38016 16537 b9b8fb9a0b520ca40812c02d0949e422 "xelatex"
-  "lucrare.run.xml" 1780845669.3918 2458 95b6006b2c39f59749fa9a1207ac6aa7 "xelatex"
-  "lucrare.tex" 1780845652.47892 152776 6d0c7477f6a79886705b8b1ad69c41b5 ""
-  "lucrare.toc" 1780845669.39281 7258 ff04629cd5f317db855199e74878104a "xelatex"
+  "lucrare.aux" 1781705942.61591 48317 0ac2d2ded3225ced2589541d3eaa11b0 "xelatex"
+  "lucrare.bbl" 1781704706.17763 47208 bff8fc4a3e939cd260de12b2de106284 "biber lucrare"
+  "lucrare.out" 1781705942.64695 11618 ff7b28c26cc9212e37a5c0496ef4205a "xelatex"
+  "lucrare.run.xml" 1781705942.66013 2458 95b6006b2c39f59749fa9a1207ac6aa7 "xelatex"
+  "lucrare.tex" 1781705926.8332 180721 ea646fe00308cd6d2ead78e156f07518 ""
+  "lucrare.toc" 1781705942.66013 8257 49fdae8cbcba8b47163a3a36e672ee09 "xelatex"
   (generated)
   "lucrare.aux"
   "lucrare.bcf"

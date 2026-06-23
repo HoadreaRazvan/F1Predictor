@@ -6,7 +6,6 @@ from f1pred.features.engineering import add_features
 
 _POINTS = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8}
 
-
 def _toy_feats(seasons=(2020, 2021, 2022), rounds=4, n_drivers=6, seed=0):
     rng = np.random.default_rng(seed)
     drivers = [f"D{i}" for i in range(n_drivers)]
@@ -32,16 +31,15 @@ def _toy_feats(seasons=(2020, 2021, 2022), rounds=4, n_drivers=6, seed=0):
                 )
     return add_features(pd.DataFrame(rows))
 
-
 def test_augmented_uses_more_data_than_baseline():
     feats = _toy_feats()
     _, n_base = _fit_before(feats, "tree", 2022)
     rounds = sorted(int(r) for r in feats[feats["season"] == 2022]["round"].unique())
     _, n_aug = _fit_before(feats, "tree", 2022, upto_round=rounds[-1])
     assert n_aug > n_base
+
     _, n_first = _fit_before(feats, "tree", 2022, upto_round=rounds[0])
     assert n_first == n_base
-
 
 def test_race_metrics_keys_and_ranges():
     feats = _toy_feats()

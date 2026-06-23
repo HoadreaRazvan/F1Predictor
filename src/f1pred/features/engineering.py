@@ -8,48 +8,58 @@ import pandas as pd
 from .. import config
 
 FEATURE_COLUMNS = [
+
     "grid",
     "quali_pos",
     "is_pole",
     "start_top3",
     "start_top10",
+
     "form_avg_finish",
     "form_avg_points",
     "form_podium_rate",
     "form_dnf_rate",
     "form_avg_grid",
     "last_finish",
+
     "season_points",
     "season_position",
     "season_podiums",
     "season_wins",
     "season_races",
+
     "team_form_avg_finish",
     "team_form_avg_points",
     "team_season_points",
     "team_season_position",
+
     "circuit_driver_avg_finish",
     "circuit_driver_podium_rate",
     "circuit_team_avg_finish",
+
     "career_races",
     "round",
     "is_sprint_weekend",
     "rain",
     "track_temp",
     "air_temp",
+
     "quali_gap_to_pole",
     "quali_gap_to_teammate",
     "grid_pos_minus_quali_pos",
     "teammate_grid_pos",
+
     "driver_points_minus_teammate",
     "team_avg_quali_pos_last_5",
     "team_dnf_rate_last_5",
     "team_avg_pit_stop_time",
+
     "circuit_overtaking_difficulty",
     "circuit_safety_car_rate",
     "circuit_podium_rate_from_grid_pos",
     "rain_probability",
     "tyre_degradation_level",
+
     "driver_wet_performance",
     "race_pace_last_5",
 ]
@@ -79,6 +89,7 @@ _DEFAULTS = {
     "rain": 0.0,
     "track_temp": 30.0,
     "air_temp": 22.0,
+
     "quali_gap_to_pole": 1.5,
     "quali_gap_to_teammate": 0.0,
     "grid_pos_minus_quali_pos": 0.0,
@@ -96,21 +107,17 @@ _DEFAULTS = {
     "race_pace_last_5": 1.05,
 }
 
-
 def _mean(seq, default):
     return float(np.mean(seq)) if len(seq) else default
 
-
 def _rank_of(value: float, all_values) -> int:
     return 1 + int(sum(1 for v in all_values if v > value))
-
 
 def _overtaking_difficulty(poschanges) -> float:
     if not len(poschanges):
         return _DEFAULTS["circuit_overtaking_difficulty"]
     avg = float(np.mean(poschanges))
     return float(np.clip(1.0 - avg / 10.0, 0.0, 1.0))
-
 
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(["season", "round"]).reset_index(drop=True)
@@ -325,12 +332,14 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
             c_sc[circuit0].append(float(first["sc_flag"]))
         if pd.notna(first["tyre_deg"]):
             c_tyre[circuit0].append(float(first["tyre_deg"]))
+
         for tid_g, sub in grp.groupby("team_id"):
             vals = sub["pit_stop_time"].dropna()
             if len(vals):
                 t_pit[tid_g].append(float(vals.mean()))
 
     feat_df = pd.DataFrame(feat_rows).set_index("_index").sort_index()
+
     overlap = [c for c in feat_df.columns if c in df.columns and c != "round"]
     out = df.drop(columns=overlap).join(feat_df.drop(columns=["round"]))
 
@@ -341,12 +350,11 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     out["is_podium"] = (out["position"] <= config.PODIUM_CUTOFF).astype(float)
     return out
 
-
-def feature_matrix(df: pd.DataFrame):
-    X = df[FEATURE_COLUMNS].to_numpy(dtype=float)
+def feature_matrix(df: pd.DataFrame, columns=None):
+    cols = list(columns) if columns is not None else list(FEATURE_COLUMNS)
+    X = df[cols].to_numpy(dtype=float)
     y = df["is_podium"].to_numpy(dtype=float)
-    return X, y, list(FEATURE_COLUMNS)
-
+    return X, y, cols
 
 def get_feature_dataset(force: bool = False) -> pd.DataFrame:
     from ..data import get_results_long

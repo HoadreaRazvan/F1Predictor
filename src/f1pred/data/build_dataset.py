@@ -1,3 +1,5 @@
+"""Orchestrarea tabelului "lung" de rezultate (cu cache pe disc în parquet)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -7,10 +9,16 @@ from .. import config
 from . import extras as extras_mod
 from . import loader
 
+# Coloane brute aduse din îmbogățirea (offline) ``race_extras.parquet``.
 _EXTRA_COLS = ["pit_stop_time", "race_pace", "sc_flag", "tyre_deg"]
 
 
 def _merge_extras(df: pd.DataFrame) -> pd.DataFrame:
+    """Atașează coloanele de îmbogățire pe (sezon, rundă, pilot). Offline, fără rețea.
+
+    Dacă fișierul de îmbogățiri lipsește, coloanele sunt create cu NaN (modelele vor
+    folosi valorile implicite din ingineria caracteristicilor).
+    """
     extras = extras_mod.get_race_extras()
     if extras is None or extras.empty:
         for c in _EXTRA_COLS:
@@ -25,10 +33,12 @@ def _merge_extras(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_results_long(seasons=None, save: bool = True) -> pd.DataFrame:
+    """Construiește tabelul lung din FastF1 și (opțional) îl salvează în parquet."""
     config.ensure_dirs()
     df = loader.load_all(seasons)
     df = _merge_extras(df)
 
+    # Sortare cronologică stabilă -> esențială pentru feature-urile rulante cauzale.
     df = df.sort_values(["season", "round", "position"], na_position="last").reset_index(drop=True)
 
     if save:
@@ -38,6 +48,7 @@ def build_results_long(seasons=None, save: bool = True) -> pd.DataFrame:
 
 
 def get_results_long(force: bool = False) -> pd.DataFrame:
+    """Întoarce tabelul lung; îl reconstruiește doar dacă lipsește sau force=True."""
     if not force and config.DATASET_PATH.exists():
         return pd.read_parquet(config.DATASET_PATH)
     return build_results_long(save=True)

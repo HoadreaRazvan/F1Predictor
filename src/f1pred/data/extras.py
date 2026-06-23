@@ -1,3 +1,20 @@
+"""Îmbogățiri descărcate O SINGURĂ DATĂ din FastF1 (tururi, pit-stops, mesaje).
+
+Pipeline-ul normal rulează strict offline din cache (vezi ``loader.py``), iar
+folderele de cursă din cache conțin doar rezultate + vreme. Pentru câteva
+caracteristici avem nevoie de date mai bogate, care nu sunt în cache-ul de bază:
+
+  * ``pit_stop_time`` — durata medie a opririlor la boxe (din Ergast/Jolpica);
+  * ``race_pace``     — ritmul de cursă al pilotului (median tururi verzi, normalizat);
+  * ``sc_flag``       — dacă în cursă a apărut Safety Car / VSC (din mesajele de control);
+  * ``tyre_deg``      — degradarea pneurilor (panta timpului pe tur vs. vârsta pneului).
+
+Acest modul le extrage cu rețeaua TEMPORAR activată și salvează rezultatul în
+``outputs/race_extras.parquet`` (o linie per sezon/rundă/pilot). După această
+descărcare unică, restul proiectului rămâne offline și reproductibil, citind acel
+fișier prin :func:`get_race_extras`.
+"""
+
 from __future__ import annotations
 
 import time
@@ -11,19 +28,22 @@ from . import loader
 
 warnings.filterwarnings("ignore")
 
+# Coloanele fișierului de îmbogățiri (în această ordine).
 EXTRAS_COLUMNS = [
     "season",
     "round",
     "driver_id",
     "team_id",
-    "pit_stop_time",
-    "race_pace",
-    "sc_flag",
-    "tyre_deg",
+    "pit_stop_time",  # per pilot (s)
+    "race_pace",      # per pilot (>=1, normalizat pe circuit)
+    "sc_flag",        # per cursă (0/1)
+    "tyre_deg",       # per cursă (s/tur)
 ]
 
 
+# --------------------------------------------------------------------- pit-stops
 def _pit_stop_times(year: int, rnd: int) -> dict:
+    """DriverId -> durata mediană a opririlor la boxe (s), din Ergast/Jolpica."""
     try:
         from fastf1.ergast import Ergast
 
@@ -43,13 +63,16 @@ def _pit_stop_times(year: int, rnd: int) -> dict:
     secs = pd.to_numeric(secs, errors="coerce")
 
     work = pd.DataFrame({"driver_id": df["driverId"].astype(str), "sec": secs}).dropna()
+    # Filtru defensiv: elimină valori absurde (drive-through, erori de raportare).
     work = work[(work["sec"] >= 1.5) & (work["sec"] <= 60.0)]
     if work.empty:
         return {}
     return {did: float(g["sec"].median()) for did, g in work.groupby("driver_id")}
 
 
+# -------------------------------------------------------------------- safety car
 def _safety_car_flag(session, laps) -> float:
+    """1.0 dacă în cursă a fost Safety Car / VSC, altfel 0.0 (nan dacă nu se poate)."""
     try:
         msg = session.race_control_messages
     except Exception:
@@ -64,6 +87,7 @@ def _safety_car_flag(session, laps) -> float:
             hit = bool(msg["Category"].astype(str).str.contains("SafetyCar", case=False).any())
         return 1.0 if hit else 0.0
 
+    # Fallback: codurile de status al pistei din tururi (4 = SC, 6/7 = VSC).
     if laps is not None and len(laps) > 0 and "TrackStatus" in laps:
         ts = laps["TrackStatus"].astype(str)
         if ts.str.contains("4").any() or ts.str.contains("6").any() or ts.str.contains("7").any():
@@ -72,7 +96,9 @@ def _safety_car_flag(session, laps) -> float:
     return np.nan
 
 
+# --------------------------------------------------------------- tururi „curate"
 def _green_laps(laps) -> pd.DataFrame | None:
+    """Tururi verzi (status pistă „1"), fără intrare/ieșire din boxe, cu timp valid."""
     if laps is None or len(laps) == 0 or "LapTime" not in laps:
         return None
     secs = laps["LapTime"].dt.total_seconds()
@@ -86,7 +112,13 @@ def _green_laps(laps) -> pd.DataFrame | None:
     return sub
 
 
+# --------------------------------------------------------------------- race pace
 def _race_pace(laps, abbr2id: dict) -> dict:
+    """DriverId -> ritm de cursă normalizat: median(pilot) / cuantila 0.10 a plutonului.
+
+    Normalizarea face valorile comparabile între circuite (independent de lungime):
+    1.0 = pe ritmul de top al plutonului, valori >1 = mai lent.
+    """
     sub = _green_laps(laps)
     if sub is None:
         return {}
@@ -102,7 +134,13 @@ def _race_pace(laps, abbr2id: dict) -> dict:
     return out
 
 
+# ------------------------------------------------------------- tyre degradation
 def _tyre_degradation(laps) -> float:
+    """Degradare la nivel de cursă: median al pantelor timp/tur vs. vârsta pneului.
+
+    Pentru fiecare stint (>=5 tururi verzi) se estimează panta liniară a timpului pe
+    tur în funcție de ``TyreLife``; rezultatul este mediana pantelor (s/tur).
+    """
     sub = _green_laps(laps)
     if sub is None or "TyreLife" not in sub or "Stint" not in sub:
         return np.nan
@@ -119,12 +157,14 @@ def _tyre_degradation(laps) -> float:
             slope = float(np.polyfit(x, y, 1)[0])
         except Exception:
             continue
-        if -0.5 <= slope <= 2.0:
+        if -0.5 <= slope <= 2.0:  # clamp defensiv (s/tur plauzibil)
             slopes.append(slope)
     return float(np.median(slopes)) if slopes else np.nan
 
 
+# ---------------------------------------------------------------- extracție rundă
 def _extract_round(year: int, rnd: int) -> list[dict]:
+    """Extrage îmbogățirile unei runde -> listă de rânduri (un rând per pilot)."""
     import fastf1
 
     try:
@@ -172,13 +212,23 @@ def _extract_round(year: int, rnd: int) -> list[dict]:
     return rows
 
 
+# ------------------------------------------------------------------ API publică
 def build_race_extras(seasons=None, *, throttle: float = 0.5, save: bool = True,
                       force: bool = False) -> pd.DataFrame:
+    """Descarcă (cu rețea) îmbogățirile pentru toate sezoanele și le salvează în parquet.
+
+    Procesul este \emph{incremental și resumabil}: rundele deja prezente în parquet sunt
+    sărite, iar progresul este salvat după fiecare sezon. Astfel, dacă API-ul public
+    impune o limită de rată (eng. \emph{rate limiting}), e suficient să se reia comanda
+    după resetarea limitei — rundele descărcate anterior nu se mai cer din nou.
+    Rundele indisponibile rămân fără rând și primesc valori implicite în aval.
+    """
     import fastf1
 
     seasons = list(seasons) if seasons is not None else list(config.SEASONS)
     config.ensure_dirs()
 
+    # Pornim de la ce avem deja (dacă nu se forțează o reconstrucție completă).
     existing = pd.DataFrame(columns=EXTRAS_COLUMNS)
     if not force and config.RACE_EXTRAS_PATH.exists():
         try:
@@ -188,7 +238,7 @@ def build_race_extras(seasons=None, *, throttle: float = 0.5, save: bool = True,
     done = set(zip(existing["season"].astype(int), existing["round"].astype(int))) \
         if len(existing) else set()
 
-    loader.enable_cache(offline=False)
+    loader.enable_cache(offline=False)  # PERMITE descărcări — doar aici!
 
     new_rows: list[dict] = []
 
@@ -220,7 +270,7 @@ def build_race_extras(seasons=None, *, throttle: float = 0.5, save: bool = True,
             if throttle:
                 time.sleep(throttle)
         print(f"  {year}: {len(new_rows) - n_before} rânduri noi")
-        _persist()
+        _persist()  # salvăm progresul după fiecare sezon (rezistent la limita de rată)
 
     parts = [existing] if len(existing) else []
     if new_rows:
@@ -234,6 +284,7 @@ def build_race_extras(seasons=None, *, throttle: float = 0.5, save: bool = True,
 
 
 def get_race_extras() -> pd.DataFrame:
+    """Citește îmbogățirile (offline). Frame gol corect tipat dacă fișierul lipsește."""
     if config.RACE_EXTRAS_PATH.exists():
         try:
             return pd.read_parquet(config.RACE_EXTRAS_PATH)
